@@ -119,12 +119,12 @@ def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, n_trial
     for i in range(n_rotations):
         psi = 2*np.pi * float(i)/n_rotations
         cuts = count_skymap(pair, survey, inputs, footprint, sats, sat_cut=sat_cut, psi=psi, n_trials=1)
-        cut_results.append(cut)
+        cut_results.append(cuts)
 
     # Merge skymaps into a .gif
-    print '\nCreating .gif...'
+    print('\nCreating .gif...')
     subprocess.call("convert -delay 30 -loop 0 realizations/{0}/skymaps_no-fixed-location/*.png realizations/{0}/{0}_skymap_no-fixed-location.gif".format(pair).split())
-    print 'Done!'
+    print('Done!')
 
     # Save results
     cut_results = np.array(cut_results)
