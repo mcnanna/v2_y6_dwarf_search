@@ -6,7 +6,7 @@ batch:
 catalog:
   basis_1: RA
   basis_2: DEC
-  dirname: /afs/hep.wisc.edu/home/mcnanna/data/skim_y6_gold_2_0
+  dirname: /Users/mcnanna/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_v2_skim
   galaxies: EXT_MASH > 2
   mag: PSF_MAG_{}_CORRECTED
   mag_err: PSF_MAG_ERR_{}
@@ -20,7 +20,7 @@ catalog:
 grid:
   bin_edge: 8.0
   delta_x: 0.003
-  grid_dir: /afs/hep.wisc.edu/home/mcnanna/data/grid_selections_dx=0.003_binedge=8.0
+  grid_dir: /Users/mcnanna/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/grid_selections_dx=0.003_binedge=8.0
   smoothing: 1.0
 isochrone:
   age: 12
@@ -33,7 +33,7 @@ moduli:
   step: 0.5
 output:
   log_dir: log_dir
-  plot_dir: plot_dir
+  plot_dir: figures
   results_dir: results_dir
 survey:
-  fracdet: /afs/hep.wisc.edu/home/mcnanna/data/y6_gold_v2_footprint.fits
+  fracdet: /Users/mcnanna/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_gold_v2_footprint.fits
