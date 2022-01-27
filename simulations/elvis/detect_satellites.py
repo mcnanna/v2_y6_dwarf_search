@@ -76,9 +76,10 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
     subprocess.call('mkdir -p realizations/{}/skymaps'.format(pair).split())
 
     if psi is None and pair=='RJ':
-        psi = 66.
+        psi = np.radians(66.)
     if psi is None and pair=='TL':
-        psi = 330.
+        psi = np.radians(330.)
+    psideg = int(round(np.degrees(psi),0))
 
     sat_ras, sat_decs = sats.ra_dec(psi)
     if sat_cut is not None:
@@ -89,7 +90,7 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
     footprint_cut = (footprint[pix] > 0)
     detectable_cut = (sigmas >= 6.0)
 
-    print "psi = {}: {} total sats, {} detectable".format(psi, sum(footprint_cut), sum(footprint_cut & detectable_cut))
+    print "psi = {}: {} total sats, {} detectable".format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut))
 
     plt.figure(figsize=(12,8)) 
     smap = skymap.Skymap(projection='mbtfpq', lon_0=0)
@@ -122,7 +123,6 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
     dras, ddecs = dras[order], ddecs[order]
     smap.plot(dras, ddecs, latlon=True, c='green', lw=3, zorder=0)
 
-    psideg = int(round(np.degrees(psi),0))
     plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut)))
     plt.savefig('realizations/{0}/skymaps/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight')
     plt.close()
@@ -131,15 +131,13 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
 
 
 def rotated_skymaps(pair, footprint, sig_table, sats, sat_cut=None, n_rotations=60):
-    sigma_table = fits.open('realizations/{}/{}'.format(pair, sig_table_fname))[1].data
-    sigma_table = fits.open(sig_table)[1].data
     subprocess.call('mkdir -p realizations/{}/skymaps'.format(pair).split())
 
-    cuts = []
+    cut_results = []
     for i in range(n_rotations):
         psi = 2*np.pi * float(i)/n_rotations
         cuts = count_skymap(pair, footprint, sig_table, sats, sat_cut=sat_cut, psi=psi)
-        cuts.append(cut)
+        cut_results.append(cut)
 
     # Merge skymaps into a .gif
     print '\nCreating .gif...'
@@ -147,8 +145,8 @@ def rotated_skymaps(pair, footprint, sig_table, sats, sat_cut=None, n_rotations=
     print 'Done!'
 
     # Save results
-    cuts = np.array(cuts)
-    np.save('realizations/{0}/{0}_skymap_cuts'.format(pair),cuts)
+    cut_results = np.array(cut_results)
+    np.save('realizations/{0}/{0}_skymap_cuts'.format(pair),cut_results)
 
 
 def summary_plots(pair):
@@ -220,7 +218,7 @@ if __name__ == '__main__':
 
     if (args['psi'] is not None) or args['rotations']:
         sigma_table = fits.open('realizations/{}/{}'.format(args['pair'], args['fname']))[1].data
-        subprocess.call('mkdir -p realizations/{}/skymaps'.format(pair).split())
+        subprocess.call('mkdir -p realizations/{}/skymaps'.format(args['pair']).split())
         footprint = ugali.utils.healpix.read_map('~/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_gold_v2_footprint.fits', nest=True)
     if args['psi'] is not None:
         count_skymap(args['pair'], footprint, sigma_table, sats, sat_cut=cut, psi=args['psi'])

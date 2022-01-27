@@ -71,7 +71,7 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         percent.bar(i+1, np.count_nonzero(footprint_cut))
 
     detectable_cut = (sigmas >= 6.0)
-    print "psi = {}: {} total sats, {} detectable".format(psi, sum(footprint_cut), sum(footprint_cut & detectable_cut))
+    print("psi = {}: {} total sats, {} detectable".format(psi, sum(footprint_cut), sum(footprint_cut & detectable_cut)))
 
     plt.figure(figsize=(12,8)) 
     smap = skymap.Skymap(projection='mbtfpq', lon_0=0)
@@ -115,11 +115,11 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
 def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, n_trials=1, n_rotations=60):
     subprocess.call('mkdir -p realizations/{}/skymaps_no-fixed-location'.format(pair).split())
 
-    cuts = []
+    cut_results = []
     for i in range(n_rotations):
         psi = 2*np.pi * float(i)/n_rotations
         cuts = count_skymap(pair, survey, inputs, footprint, sats, sat_cut=sat_cut, psi=psi, n_trials=1)
-        cuts.append(cut)
+        cut_results.append(cut)
 
     # Merge skymaps into a .gif
     print '\nCreating .gif...'
@@ -127,8 +127,8 @@ def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, n_trial
     print 'Done!'
 
     # Save results
-    cuts = np.array(cuts)
-    np.save('realizations/{0}/{0}_skymap_cuts_no-fixed-location'.format(pair),cuts)
+    cut_results = np.array(cut_results)
+    np.save('realizations/{0}/{0}_skymap_cuts_no-fixed-location'.format(pair),cut_results)
 
 
 def summary_plots(pair):
