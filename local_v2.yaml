@@ -1,0 +1,39 @@
+band_1: G
+band_2: R
+band_3: I
+batch:
+  max_jobs: 20
+catalog:
+  basis_1: RA
+  basis_2: DEC
+  dirname: /Users/mcnanna/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_v2_skim
+  galaxies: EXT_MASH > 2
+  mag: PSF_MAG_{}_CORRECTED
+  mag_err: PSF_MAG_ERR_{}
+  mag_max: 99.0
+  nside: 32
+  other: colorcolor_v2
+  quality: PSF_MAG_R_CORRECTED < 24.5 && PSF_MAG_I_CORRECTED < 24.25
+  reddening: null
+  stars: EXT_MASH >= 0 && EXT_MASH <= 2
+  size: BDF_T
+grid:
+  bin_edge: 8.0
+  delta_x: 0.003
+  grid_dir: /Users/mcnanna/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/grid_selections_dx=0.003_binedge=8.0
+  smoothing: 1.0
+isochrone:
+  age: 12
+  metallicity: 0.0001
+  name: Bressan2012
+  survey: des
+moduli:
+  end: 26.5
+  start: 22.5
+  step: 0.5
+output:
+  log_dir: log_dir
+  plot_dir: plot_dir
+  results_dir: results_dir
+survey:
+  fracdet: /Users/mcnanna/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_gold_v2_footprint.fits
