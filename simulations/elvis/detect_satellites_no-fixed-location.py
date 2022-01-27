@@ -113,7 +113,7 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
 
 
 def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, n_trials=1, n_rotations=60):
-    subprocess.call('mkdir -p realizations/{}/skymaps-no_fixed_location'.format(pair).split())
+    subprocess.call('mkdir -p realizations/{}/skymaps_no-fixed-location'.format(pair).split())
 
     cuts = []
     for i in range(n_rotations):
