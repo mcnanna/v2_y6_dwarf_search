@@ -143,7 +143,7 @@ class Halos():
 
         if pair == 'TL':
             # Most massive subhalo is not MW or M31, so we must reorder 
-            new_order = np.array([1,2,0] + range(3,len(self.halos)))
+            new_order = np.array([1,2,0] + list(range(3,len(self.halos))))
             self.halos = self.halos[new_order]
 
         self.M31 = self.halos[0]
