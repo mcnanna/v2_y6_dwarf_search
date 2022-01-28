@@ -137,7 +137,7 @@ def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, n_trial
 
 
 def summary_plots(pair):
-    results = np.load('realizations/{0}/{0}_skymap_cuts_no-fixed-location.npy'.format(pair))
+    results = np.load('realizations/{0}/{0}_skymap_cuts_no-fixed-location.npy'.format(pair), allow_pickle=True)
 
     if args['pair'] == 'RJ':
         title = 'Romeo \& Juliet'
@@ -159,9 +159,9 @@ def summary_plots(pair):
         plt.savefig('realizations/{}/{}.png'.format(pair, outname), bbox_inches='tight')
         plt.close()
 
-    total_sats = [sum(cuts[0]) for cuts in results]
-    hist(total_sats, 'Satellites in footprint', 'total_sats_hist')
-    detectable_sats = [sum(cuts[0]&cuts[1]) for cuts in results]
+    total_sats = [np.count_nonzero(cuts[0]) for cuts in results]
+    hist(total_sats, 'Satellites in footprint', 'total_sats_hist_no-fixed-location')
+    detectable_sats = [np.count_nonzero(cuts[1]) for cuts in results]
     hist(detectable_sats, 'Detectable satellites in foorprint', 'detectable_sats_hist_no-fixed-location')
 
 
