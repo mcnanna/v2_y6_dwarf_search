@@ -35,9 +35,9 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
     subprocess.call('mkdir -p realizations/{}/skymaps_no-fixed-location'.format(pair).split())
 
     if psi is None and pair=='RJ':
-        psi = 66.
+        psi = np.radians(66.)
     if psi is None and pair=='TL':
-        psi = 330.
+        psi = np.radians(330.)
 
     sat_ras, sat_decs = sats.ra_dec(psi)
     if sat_cut is not None:
@@ -72,7 +72,7 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         percent.bar(i+1, np.count_nonzero(footprint_cut))
 
     detectable_cut = (sigmas >= 6.0)
-    print("psi = {}: {} total sats, {} detectable".format(psi, np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
+    print("psi = {}: {} total sats, {} detectable".format(np.degrees(psi), np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
 
     plt.figure(figsize=(12,8)) 
     smap = skymap.Skymap(projection='mbtfpq', lon_0=0)
@@ -110,7 +110,8 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
 
     psideg = int(round(np.degrees(psi),0))
     plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable'.format(psideg, np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
-    plt.savefig('realizations/{0}/skymaps_no-fixed-location/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
+    #plt.savefig('realizations/{0}/skymaps_no-fixed-location/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
+    plt.savefig('{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
     plt.close()
 
     return (footprint_cut, detectable_cut)
