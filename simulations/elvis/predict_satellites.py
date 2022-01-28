@@ -38,7 +38,10 @@ class Satellites:
         self.halos = loader.Halos(pair) # Halo coordinates are translated such that the Milky Way is at the origin
         params = loader.Parameters()
         with open(interpolator, 'rb') as interp:
-            vpeak_Mr_interp = pickle.load(interp)
+            try:
+                vpeak_Mr_interp = pickle.load(interp)
+            except:
+                vpeak_Mr_interp = pickle.load(interp, encoding='latin1')
 
         # Cut subhalo catalog
         self.subhalos = self.cut_subhalo_catalog(self.halos.subhalos, params)
@@ -117,14 +120,14 @@ class Satellites:
         if not (need_acc or need_peri):
             return rvir_acc, rs_acc, d_peri, a_peri
 
-        print "{} {} not yet calculated".format("Accretion" if need_acc else "", "Pericenter" if need_peri else"")
+        print("{} {} not yet calculated".format("Accretion" if need_acc else "", "Pericenter" if need_peri else""))
         sim = SimulationAnalysis(trees_dir = 'sims/{}/trees'.format(halos.pair))
-        print "Loading M31 and MW main branches..."
+        print("Loading M31 and MW main branches...")
         tree_M31 = sim.load_main_branch(halos.M31['id'])
         tree_MW = sim.load_main_branch(halos.MW['id'])
 
         main_branches = []
-        print "Loading {} subhalo branches...".format(len(subhalos))
+        print("Loading {} subhalo branches...".format(len(subhalos)))
         count = 0
         for subhalo in subhalos:
             branch = sim.load_main_branch(subhalo['id'])

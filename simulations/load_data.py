@@ -49,7 +49,7 @@ def get_healpixel_files(cfg, nside, pixels):
         
         for i, pixel in enumerate(pixels):
             if pixel not in exists:
-                print "File {} ...".format(i+1)
+                print("File {} ...".format(i+1))
                 try:
                     scp.get('~/data/skim_y6_gold_2_0/y6_gold_2_0_{:0>5n}.fits'.format(pixel), '{}/y6_gold_2_0_{:0>5n}.fits'.format(datadir, pixel))
                 except Exception as e:
