@@ -48,7 +48,7 @@ class Satellites:
 
         # Check if both accretion-time radii and pericenter have been calculated
         accretion_fname = 'sims/{0}/{0}_accretion_rvir.npy'.format(pair)
-        pericenter_fname = 'sims/{0}/{0}_perihelion.npy'.format(pair)
+        pericenter_fname = 'sims/{0}/{0}_pericenter.npy'.format(pair)
         self.rvir_acc, self.rs_acc, self.d_peri, self.a_peri = self.tree_calculations(self.halos, self.subhalos, accretion_fname=accretion_fname, pericenter_fname=pericenter_fname)
 
         # Calculate M_r luminosities from V_peak
@@ -62,9 +62,35 @@ class Satellites:
         self.mu = Mr_to_mu(self.M_r, self.r_physical)
 
         # Calculate disruption probability due to baryonic effects and occupation fraction (no WDM suppression)
-        # TODO
-        ML_prob = np.zeros(len(self.subhalos))
+        # Calculations using Ethan's RF classifier had to be done on DES machines due to needing Python 3.
+        # So instead of applying the classifier here, I must load previously-calculated results.
+        # Therefore this is a bit circular, since you need to load the sats, to pass to the classifier, to load
+        # the survival probs into the sats. 
+        try:
+            ML_prob = np.load('sims/{0}/{0}_disruption_prob.npy'.format(pair))
+        except IOError:
+            print "Disruption probabilities not calculated"
+            print "Calculating relevant subhalo features and writing to sims/{0}/{0}_rf_subhalo_features.fits ...".format(pair)
+            features = Table()
+            features['d_peri'] = self.d_peri
+            features['a_acc']  = self.subhalos['acc_scale']
+            features['V_acc']  = self.subhalos['vacc']
+            features['M_acc']  = self.subhalos['macc']
+            features['a_peri'] = self.a_peri
+            try:
+                features.write('sims/{0}/{0}_rf_subhalo_features.fits'.format(pair))
+            except IOError:
+                print("FITS file already exists")
+            print "Copy FITS file to DES machines and feed into projects/v2_y6_dwarf_search/calc_disruption_probs.py"
+
+            cont = raw_input("Continue, assuming disruption_prob = 0? (y/n)")
+            if cont.lower() == 'y':
+                ML_prob = np.zeros(len(self.subhalos))
+            else:
+                raise IOError("No disruption probability file")
+        
         self.prob = self.get_survival_prob(ML_prob, self.subhalos['mpeak'], params)
+
 
         # Gather into nice table
         self.table = Table()

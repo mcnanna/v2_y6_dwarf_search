@@ -138,7 +138,7 @@ class Halos():
     def __init__(self, pair):
         """Pair is either RJ (Romeo and Juliet) or TL (Thelma and Louise)"""
         self.pair = pair
-        fields = ['scale','id', 'upid', 'pid', 'mvir', 'mpeak', 'rvir', 'rs', 'vmax', 'vpeak', 'macc', 'vacc', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'M200c', 'depth_first_id','scale_of_last_MM','jx','jy','jz']
+        fields = ['scale','id', 'upid', 'pid', 'mvir', 'mpeak', 'rvir', 'rs', 'vmax', 'vpeak', 'macc', 'vacc', 'acc_scale', 'x', 'y', 'z', 'vx', 'vy', 'vz', 'M200c', 'depth_first_id','scale_of_last_MM','jx','jy','jz']
         self.halos = readHlist('sims/{0}/hlist_1.00000.list'.format(pair), fields)
 
         if pair == 'TL':
