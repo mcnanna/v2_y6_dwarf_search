@@ -91,9 +91,9 @@ class Inputs:
         self.log_photo_error = self.getPhotoError(datadir + 'photo_error_model.csv')
         self.completeness = self.getCompleteness(datadir + 'y3a2_stellar_classification_summary_ext2.csv')
 
-        self.m_maglim_g = ugali.utils.healpix.read_map(datadir + 'y6a1_raw_sys1.0_sof_v1_nside4096_ring_g_depth.fits.gz')
-        self.m_maglim_r = ugali.utils.healpix.read_map(datadir + 'y6a1_raw_sys1.0_sof_v1_nside4096_ring_r_depth.fits.gz')
-        self.m_maglim_i = ugali.utils.healpix.read_map(datadir + 'y6a1_raw_sys1.0_sof_v1_nside4096_ring_i_depth.fits.gz')
+        self.m_maglim_g = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_pdf_nside4095_g_depth.fits')
+        self.m_maglim_r = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_pdf_nside4095_r_depth.fits')
+        self.m_maglim_i = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_pdf_nside4095_i_depth.fits')
 
         self.m_ebv = ugali.utils.healpix.read_map(datadir + 'ebv_sfd98_fullres_nside_4096_nest_equatorial.fits.gz')
 

@@ -86,7 +86,8 @@ class SimSatellite:
         # Includes penalty for interstellar extinction and also include variations in depth
         # Use r band:
         # 24.42 is the median magnitude limit from Y6 according to Keith's slack message
-        cut_detect = (np.random.uniform(size=len(mag_r)) < inputs.completeness(mag_r + mag_extinction_r + (24.42 - np.clip(maglim_r, 20., 26.))))
+        median_maglim = np.median(inputs.m_maglim_r[ugali.utils.healpix.angToDisc(4096, lon_centroid, lat_centroid, 0.75)])
+        cut_detect = (np.random.uniform(size=len(mag_r)) < inputs.completeness(mag_r + mag_extinction_r + (median_maglim - np.clip(maglim_r, 20., 26.))))
 
         # Absoulte Magnitude
         v = mag_g - 0.487*(mag_g - mag_r) - 0.0249 # Don't know where these numbers come from, copied from ugali
@@ -98,15 +99,16 @@ class SimSatellite:
 
         # Turn star info into an array, matching Y6 .fits data format loaded by simple
         dtype = [('RA', '>f8'), ('DEC', '>f8'), ('PSF_MAG_G_CORRECTED', '>f8'), ('PSF_MAG_R_CORRECTED', '>f8'), ('PSF_MAG_I_CORRECTED', '>f8'), ('PSF_MAG_ERR_G', '>f8'), ('PSF_MAG_ERR_R', '>f8'), ('PSF_MAG_ERR_I', '>f8'), ('BDF_T', '>f8')]
-        sat_stars = np.zeros(len(lon), dtype=dtype)
-        sat_stars['RA'] = lon
-        sat_stars['DEC'] = lat
-        sat_stars['PSF_MAG_G_CORRECTED'] = mag_g_meas
-        sat_stars['PSF_MAG_R_CORRECTED'] = mag_r_meas
-        sat_stars['PSF_MAG_I_CORRECTED'] = mag_i_meas
-        sat_stars['PSF_MAG_ERR_G'] = mag_g_error
-        sat_stars['PSF_MAG_ERR_R'] = mag_r_error
-        sat_stars['PSF_MAG_ERR_I'] = mag_i_error
+        #sat_stars = np.zeros(len(lon), dtype=dtype)
+        sat_stars = np.zeros(np.count_nonzero(cut_detect), dtype=dtype)
+        sat_stars['RA'] = lon[cut_detect]
+        sat_stars['DEC'] = lat[cut_detect]
+        sat_stars['PSF_MAG_G_CORRECTED'] = mag_g_meas[cut_detect]
+        sat_stars['PSF_MAG_R_CORRECTED'] = mag_r_meas[cut_detect]
+        sat_stars['PSF_MAG_I_CORRECTED'] = mag_i_meas[cut_detect]
+        sat_stars['PSF_MAG_ERR_G'] = mag_g_error[cut_detect]
+        sat_stars['PSF_MAG_ERR_R'] = mag_r_error[cut_detect]
+        sat_stars['PSF_MAG_ERR_I'] = mag_i_error[cut_detect]
 
 
         self.stars = sat_stars
