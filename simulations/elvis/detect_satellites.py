@@ -23,7 +23,7 @@ import plot_utils
 
 import simple.survey
 import predict_satellites
-import sys; sys.path.append('../')
+import sys; sys.path.append('../') # Allows access to the below "more general" function used for more than just ELVIS
 import load_data
 import simSatellite
 
@@ -72,7 +72,7 @@ def create_sigma_table(sats, inputs, survey, outname=None, n_trials=1):
     return sats
 
 
-def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
+def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None, disruption=None):
     subprocess.call('mkdir -p realizations/{}/skymaps'.format(pair).split())
 
     if psi is None and pair=='RJ':
@@ -84,7 +84,7 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
     sat_ras, sat_decs = sats.ra_dec(psi)
     if sat_cut is not None:
         sat_ras, sat_decs = sat_ras[sat_cut], sat_decs[sat_cut]
-    sigmas = sigma_table['sig']
+    sigmas = sig_table['sig']
 
     pix = ugali.utils.healpix.angToPix(4096, sat_ras, sat_decs, nest=True)
     footprint_cut = (footprint[pix] > 0)
@@ -110,6 +110,8 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
         return sc
     custom_scatter(smap, sat_ras, sat_decs, c=sigmas, cmap=cmap, latlon=True, s=sizes, markers=markers, edgecolors='k', linewidths=0.2)
     plt.colorbar()
+
+
     #Add DES polygon
     des_poly = np.genfromtxt('/Users/mcnanna/Research/y3-mw-sats/data/round19_v0.txt',names=['ra','dec'])
     smap.plot(des_poly['ra'], des_poly['dec'], latlon=True, c='0.25', lw=3, alpha=0.3, zorder=0)
@@ -122,21 +124,29 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None):
     order = np.argsort(dras)
     dras, ddecs = dras[order], ddecs[order]
     smap.plot(dras, ddecs, latlon=True, c='green', lw=3, zorder=0)
-
-    plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut)))
+    # Disruption effets
+    if disruption is not None:
+        survived = sats['prob'] > disruption
+        if sat_cut is not None:
+            survived = survived[sat_cut]
+        print "{} disrupted sats in footprint".format(np.count_nonzero(~survived & footprint_cut))
+        smap.scatter(sat_ras[~survived], sat_decs[~survived], latlon=True, marker='x', s=30, c='k')
+        plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable, {} disrupted'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut), sum(~survived & footprint_cut)))
+    else:
+        plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut)))
     plt.savefig('realizations/{0}/skymaps/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight')
     plt.close()
 
     return (footprint_cut, detectable_cut)
 
 
-def rotated_skymaps(pair, footprint, sig_table, sats, sat_cut=None, n_rotations=60):
+def rotated_skymaps(pair, footprint, sig_table, sats, sat_cut=None, n_rotations=60, disruption=None):
     subprocess.call('mkdir -p realizations/{}/skymaps'.format(pair).split())
 
     cut_results = []
     for i in range(n_rotations):
         psi = 2*np.pi * float(i)/n_rotations
-        cuts = count_skymap(pair, footprint, sig_table, sats, sat_cut=sat_cut, psi=psi)
+        cuts = count_skymap(pair, footprint, sig_table, sats, sat_cut=sat_cut, psi=psi, disruption=disruption)
         cut_results.append(cuts)
 
     # Merge skymaps into a .gif
@@ -185,7 +195,8 @@ if __name__ == '__main__':
     p.add_argument('-t', '--table', action='store_true')
     p.add_argument('--n_trials', default=1, type=int)
     p.add_argument('--config')
-    p.add_argument('--psi', default=None)
+    p.add_argument('--psi', default=None, type=float)
+    p.add_argument('--prob', default=None, type=float, help="Survival probabiliy threshold")
     p.add_argument('-r', '--rotations', action='store_true')
     p.add_argument('-s', '--summary', action='store_true')
     p.add_argument('-m', '--main', action='store_true')
@@ -221,9 +232,9 @@ if __name__ == '__main__':
         subprocess.call('mkdir -p realizations/{}/skymaps'.format(args['pair']).split())
         footprint = ugali.utils.healpix.read_map('~/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_gold_v2_footprint.fits', nest=True)
     if args['psi'] is not None:
-        count_skymap(args['pair'], footprint, sigma_table, sats, sat_cut=cut, psi=args['psi'])
+        count_skymap(args['pair'], footprint, sigma_table, sats, sat_cut=cut, psi=np.radians(args['psi']), disruption=args['prob'])
     if args['rotations']:
-        rotated_skymaps(args['pair'], footprint, sigma_table, sats, sat_cut=cut, n_rotations=60)
+        rotated_skymaps(args['pair'], footprint, sigma_table, sats, sat_cut=cut, n_rotations=60, disruption=args['prob'])
 
     if args['summary']:
         summary_plots(args['pair'])
