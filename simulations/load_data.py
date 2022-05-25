@@ -6,7 +6,7 @@ import os
 import paramiko
 from scp import SCPClient
 #from numpy.lib.recfunctions import append_fields
-import scipy
+import scipy.interpolate
 import ugali.utils.healpix
 #from utils import *
 #from helpers.SimulationAnalysis import readHlist
@@ -87,13 +87,14 @@ class Inputs:
 
     def __init__(self, cfg):
         datadir = cfg['catalog']['dirname'] + '/../'
+        cmpltdir = '/Users/mcnanna/Research/y6/v2_y6_dwarf_search/simulations/completeness/'
 
-        self.log_photo_error = self.getPhotoError(datadir + 'photo_error_model.csv')
-        self.completeness = self.getCompleteness(datadir + 'y3a2_stellar_classification_summary_ext2.csv')
+        self.log_photo_error = self.getPhotoError(cmpltdir + 'photo_error_model.csv')
+        self.completeness = self.getCompleteness(cmpltdir + 'y6_gold_v2_stellar_classification_summary_g_ext2_merge.csv')
 
-        self.m_maglim_g = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_pdf_nside4095_g_depth.fits')
-        self.m_maglim_r = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_pdf_nside4095_r_depth.fits')
-        self.m_maglim_i = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_pdf_nside4095_i_depth.fits')
+        self.m_maglim_g = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_g_depth.fits')
+        self.m_maglim_r = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_r_depth.fits')
+        self.m_maglim_i = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_i_depth.fits')
 
         self.m_ebv = ugali.utils.healpix.read_map(datadir + 'ebv_sfd98_fullres_nside_4096_nest_equatorial.fits.gz')
 
