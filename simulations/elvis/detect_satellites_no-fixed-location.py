@@ -38,6 +38,7 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         psi = np.radians(66.)
     if psi is None and pair=='TL':
         psi = np.radians(330.)
+    psideg = int(round(np.degrees(psi), 0))
 
     sat_ras, sat_decs = sats.ra_dec(psi)
     if sat_cut is not None:
@@ -72,7 +73,10 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         percent.bar(i+1, np.count_nonzero(footprint_cut))
 
     detectable_cut = (sigmas >= 6.0)
-    print("psi = {}: {} total sats, {} detectable".format(np.degrees(psi), np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
+    print("psi = {}: {} total sats, {} detectable".format(psideg, np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
+    subprocess.call('mkdir -p realizations/{}/skymaps_no-fixed-location/results'.format(pair).split())
+
+    np.save('realizations/{}/skymaps_no-fixed-location/results/psi={}.npy'.format(pair, psideg), np.array([footprint_cut, detectable_cut, sigmas]))
 
     plt.figure(figsize=(12,8)) 
     smap = skymap.Skymap(projection='mbtfpq', lon_0=0)
@@ -93,7 +97,8 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         sc.set_paths(paths)
         return sc
     custom_scatter(smap, sat_ras[~footprint_cut], sat_decs[~footprint_cut], c='0.4', latlon=True, s=out_sizes, markers=out_markers)
-    custom_scatter(smap, sat_ras[footprint_cut], sat_decs[footprint_cut], c=sigmas, cmap=cmap, latlon=True, s=in_sizes, markers=in_markers, edgecolors='k', linewidths=0.2)
+    #custom_scatter(smap, sat_ras[footprint_cut], sat_decs[footprint_cut], c=sigmas, cmap=cmap, latlon=True, s=in_sizes, markers=in_markers, edgecolors='k', linewidths=0.2)
+    custom_scatter(smap, sat_ras[footprint_cut], sat_decs[footprint_cut], c=sigmas, cmap=cmap, vmin=2.2, vmax=37.5, latlon=True, s=in_sizes, markers=in_markers, edgecolors='k', linewidths=0.2)
     plt.colorbar()
     #Add DES polygon
     des_poly = np.genfromtxt('/afs/hep.wisc.edu/home/mcnanna/data/round19_v0.txt',names=['ra','dec'])
@@ -110,11 +115,10 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
 
     psideg = int(round(np.degrees(psi),0))
     plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable'.format(psideg, np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
-    #plt.savefig('realizations/{0}/skymaps_no-fixed-location/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
-    plt.savefig('{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
+    plt.savefig('realizations/{0}/skymaps_no-fixed-location/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
     plt.close()
 
-    return (footprint_cut, detectable_cut)
+    return (footprint_cut, detectable_cut, sigmas)
 
 
 def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, n_trials=1, n_rotations=60):
@@ -157,7 +161,7 @@ def summary_plots(pair):
             plt.xticks(xticks)
         plt.xlabel(xlabel)
         plt.title(title)
-        plt.savefig('realizations/{}/{}.png'.format(pair, outname), bbox_inches='tight')
+        plt.savefig('realizations/{}/{}.png'.format(pair, outname), bbox_inches='tight', dpi=200)
         plt.close()
 
     total_sats = [np.count_nonzero(cuts[0]) for cuts in results]

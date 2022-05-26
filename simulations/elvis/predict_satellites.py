@@ -69,8 +69,8 @@ class Satellites:
         try:
             ML_prob = np.load('sims/{0}/{0}_disruption_prob.npy'.format(pair))
         except IOError:
-            print "Disruption probabilities not calculated"
-            print "Calculating relevant subhalo features and writing to sims/{0}/{0}_rf_subhalo_features.fits ...".format(pair)
+            print("Disruption probabilities not calculated")
+            print("Calculating relevant subhalo features and writing to sims/{0}/{0}_rf_subhalo_features.fits ...".format(pair))
             features = Table()
             features['d_peri'] = self.d_peri
             features['a_acc']  = self.subhalos['acc_scale']
@@ -81,7 +81,7 @@ class Satellites:
                 features.write('sims/{0}/{0}_rf_subhalo_features.fits'.format(pair))
             except IOError:
                 print("FITS file already exists")
-            print "Copy FITS file to DES machines and feed into projects/v2_y6_dwarf_search/calc_disruption_probs.py"
+            print("Copy FITS file to DES machines and feed into projects/v2_y6_dwarf_search/calc_disruption_probs.py")
 
             cont = raw_input("Continue, assuming disruption_prob = 0? (y/n)")
             if cont.lower() == 'y':
