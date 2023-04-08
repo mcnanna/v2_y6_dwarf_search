@@ -311,7 +311,8 @@ def plot_sigma_matrix(fname):
             plt.annotate(annote, xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
    
     # Add approximate candidate location
-    cand_x, cand_y = 3300, -10
+    #cand_x, cand_y = 3300, -10
+    cand_x, cand_y = 3256, -7.9 # Based on values from mcmc_tight_qual
     cand_x = transform(cand_x, x_vals, dic[x]['scale']=='log')
     cand_y = transform(cand_y, y_vals, dic[y]['scale']=='log')
     plt.scatter(cand_x, cand_y, marker='*', color='yellow', edgecolor='k', s=700, zorder=101)

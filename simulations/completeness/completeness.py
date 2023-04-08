@@ -265,7 +265,7 @@ plt.axvspan(25.0, 27.0, color='red', alpha=0.2)
 plt.plot(mag_centers, efficiency, c='black', ls='--', lw=2, label='All Detections')
 plt.plot(mag_centers, efficiency_star, c='black', ls='-', lw=2, label='Stellar Sample')
 plt.legend(loc='center left', frameon=True)
-plt.xlabel('g (DES)')
+plt.xlabel('r (DES)')
 plt.ylabel('Stellar Selection Efficiency')
 plt.title('Stellar Classification ({}{})'.format('HSC+SPLASH' if args['merge'] else 'HSC', r', EXT$\leq {}$'.format(args['ext'])))
 plt.xlim(20., 27.)
@@ -276,12 +276,12 @@ ax2.set_ylabel('Galaxy Contamination', color='red')
 ax2.tick_params('y', colors='red')
 plt.ylim(0., 1.)
 #plt.plot(mag_centers, contamination_star, c='orange')
-outname = 'completeness_plots/y3a2_stellar_classification_summary_g_ext{}{}.png'.format(args['ext'], '_merge' if args['merge'] else '')
+outname = 'completeness_plots/y6_stellar_classification_summary_r_ext{}{}.png'.format(args['ext'], '_merge' if args['merge'] else '')
 plt.savefig(outname, dpi=200)
 
 ##################################################################
 
-outfile = 'y6_gold_v2_stellar_classification_summary_g_ext{}{}.csv'.format(args['ext'], '_merge' if args['merge'] else '')
+outfile = 'y6_gold_v2_stellar_classification_summary_r_ext{}{}.csv'.format(args['ext'], '_merge' if args['merge'] else '')
 writer = open(outfile, 'w')
 writer.write('%12s,%12s,%12s\n'%('mag_r', 'eff', 'eff_star'))
 for ii in range(0, len(mag_centers)):

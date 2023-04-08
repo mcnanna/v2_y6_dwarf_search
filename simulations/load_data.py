@@ -90,7 +90,7 @@ class Inputs:
         cmpltdir = '/Users/mcnanna/Research/y6/v2_y6_dwarf_search/simulations/completeness/'
 
         self.log_photo_error = self.getPhotoError(cmpltdir + 'photo_error_model.csv')
-        self.completeness = self.getCompleteness(cmpltdir + 'y6_gold_v2_stellar_classification_summary_g_ext2_merge.csv')
+        self.completeness = self.getCompleteness(cmpltdir + 'y6_gold_v2_stellar_classification_summary_r_ext2_merge.csv')
 
         self.m_maglim_g = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_g_depth.fits')
         self.m_maglim_r = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_r_depth.fits')
