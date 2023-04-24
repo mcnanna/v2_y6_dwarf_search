@@ -8,6 +8,7 @@ from matplotlib.patches import Ellipse, Circle
 
 import simple.survey
 import simple.search
+import ugali.utils.projector
 
 import load_data
 import simSatellite
@@ -23,9 +24,8 @@ matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams['font.family'] = 'serif'
 plt.ion()
 
-### Right now, the distance is hardcoded as D = 2000 kpc, mod=26.5 ###
 
-def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, outname=None, n_trials=1):
+def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, distance, outname=None, n_trials=1):
     # r_physicals in parsecs
     n_m = len(abs_mags)
     n_r = len(r_physicals)
@@ -46,10 +46,10 @@ def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, outname=Non
             
             sigmas = []
             for k in range(n_trials):
-                sim = simSatellite.SimSatellite(inputs, args['ra'], args['dec'], 2000, m, r)
+                sim = simSatellite.SimSatellite(inputs, args['ra'], args['dec'], distance, m, r)
                 data, n_stars = simSatellite.inject(region, sim)
                 region.data = data
-                sig = simSatellite.search(region, data)
+                sig = simSatellite.search(region, data, mod=ugali.utils.projector.distanceToDistanceModulus(distance))
                 sigmas.append(sig)
                 if k == 0 and sig > 37.4 : # No need to keep simulating if it's just going to max out
                     print "Stopping trials due to high significance"
@@ -71,7 +71,7 @@ def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, outname=Non
     return sigma_fits
 
 
-def plot_sigma_matrix(fname):
+def plot_sigma_matrix(fname, distance):
     # Mainly copied from ~/Research/y6/far_out/significance.py. An even more general version is found there
 
     dic = {'distance': {'label':'$D$', 'conversion': lambda d:int(d), 'unit':'kpc', 'scale':'linear', 'reverse':False}, 
@@ -121,7 +121,7 @@ def plot_sigma_matrix(fname):
     plt.ylabel('{} ({})'.format(dic[y]['label'], dic[y]['unit']))
 
     fixed = 'distance'
-    title = "{} = {} {}".format(dic['distance']['label'], dic['distance']['conversion'](2000), dic['distance']['unit'])
+    title = "{} = {} {}".format(dic['distance']['label'], dic['distance']['conversion'](distance), dic['distance']['unit'])
     
     cbar_label = '$\sigma$'
 
@@ -319,42 +319,44 @@ def plot_sigma_matrix(fname):
     #plt.annotate('Approximate candidate location', (cand_x, cand_y), textcoords='offset points', xytext=[-9,4], ha='right', va='bottom', fontsize=14, zorder=100, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'))
     
 
-    outname = '{}_vs_{}__'.format(x, y) + '{}={}'.format('distance', 2000)
+    outname = '{}_vs_{}__'.format(x, y) + '{}={}'.format('distance', int(distance))
     plt.savefig('{}.eps'.format(outname), bbox_inches='tight')
     plt.savefig('{}.png'.format(outname), bbox_inches='tight')
     plt.close()
 
 
 
+if __name__ == "__main__":
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--config', required=True)
-parser.add_argument('--ra', required=True, type=float)
-parser.add_argument('--dec', required=True, type=float)
-#parser.add_argument('--distance', required=True, type=float)
-#parser.add_argument('--mod', required=True, type=float)
-#parser.add_argument('--r', required=True, type=float, help="Aperture size (arcmin)")
-#parser.add_argument('--n_obs', required=True, type=float)
-#parser.add_argument('--id', required=False, type=int, default=0)
-#parser.add_argument('--plots', action='store_true')
-args = vars(parser.parse_args())
-
-
-with open(args['config'], 'r') as ymlfile:
-    cfg = yaml.load(ymlfile)
-    survey = simple.survey.Survey(cfg)
-
-inputs = load_data.Inputs(cfg)
-region = simple.survey.Region(survey, args['ra'], args['dec'])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', required=True)
+    parser.add_argument('--ra', required=True, type=float)
+    parser.add_argument('--dec', required=True, type=float)
+    parser.add_argument('--distance', type=float, default=2000, help="kpc")
+    #parser.add_argument('--distance', required=True, type=float)
+    #parser.add_argument('--mod', required=True, type=float)
+    #parser.add_argument('--r', required=True, type=float, help="Aperture size (arcmin)")
+    #parser.add_argument('--n_obs', required=True, type=float)
+    #parser.add_argument('--id', required=False, type=int, default=0)
+    #parser.add_argument('--plots', action='store_true')
+    args = vars(parser.parse_args())
 
 
-abs_mags = np.arange(-2.5, -14.5, -0.5)
-log_r_physical_pcs = np.arange(1.4, 3.8, 0.2)
-r_physicals = 10**log_r_physical_pcs
+    with open(args['config'], 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
+        survey = simple.survey.Survey(cfg)
+
+    inputs = load_data.Inputs(cfg)
+    region = simple.survey.Region(survey, args['ra'], args['dec'])
 
 
-create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, outname='sigma_table_10trials', n_trials=10)
+    abs_mags = np.arange(-2.5, -14.5, -0.5)
+    log_r_physical_pcs = np.arange(1.4, 3.8, 0.2)
+    r_physicals = 10**log_r_physical_pcs
 
-plot_sigma_matrix('sigma_table_10trials')
+    outname = 'sigma_table_10trials__{}kpc'.format(int(args['distance']))
+    create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, args['distance'], outname=outname, n_trials=10)
+
+    plot_sigma_matrix(outname, args['distance'])
 
 

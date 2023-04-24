@@ -126,18 +126,18 @@ def count_skymap(pair, footprint, sig_table, sats, sat_cut=None, psi=None, disru
     smap.plot(dras, ddecs, latlon=True, c='green', lw=3, zorder=0)
     # Disruption effets
     if disruption is not None:
-        survived = sats['prob'] > disruption
+        survival_cut = sats['prob'] > disruption
         if sat_cut is not None:
-            survived = survived[sat_cut]
-        print "{} disrupted sats in footprint".format(np.count_nonzero(~survived & footprint_cut))
-        smap.scatter(sat_ras[~survived], sat_decs[~survived], latlon=True, marker='x', s=30, c='k')
-        plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable, {} disrupted'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut), sum(~survived & footprint_cut)))
+            survival_cut = survival_cut[sat_cut]
+        print "{} disrupted sats in footprint".format(np.count_nonzero(~survival_cut & footprint_cut))
+        smap.scatter(sat_ras[~survival_cut], sat_decs[~survival_cut], latlon=True, marker='x', s=30, c='k')
+        plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable, {} disrupted'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut), sum(~survival_cut & footprint_cut)))
     else:
         plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} detectable'.format(psideg, sum(footprint_cut), sum(footprint_cut & detectable_cut)))
     plt.savefig('realizations/{0}/skymaps/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight')
     plt.close()
 
-    return (footprint_cut, detectable_cut)
+    return (footprint_cut, detectable_cut, survival_cut)
 
 
 def rotated_skymaps(pair, footprint, sig_table, sats, sat_cut=None, n_rotations=60, disruption=None):
@@ -159,13 +159,15 @@ def rotated_skymaps(pair, footprint, sig_table, sats, sat_cut=None, n_rotations=
     np.save('realizations/{0}/{0}_skymap_cuts'.format(pair),cut_results)
 
 
-def summary_plots(pair):
-    results = np.load('realizations/{0}/{0}_skymap_cuts.npy'.format(pair))
+def summary_plots(pair, sats=None, psi=None):
+    skymap_cuts = np.load('realizations/{0}/{0}_skymap_cuts.npy'.format(pair))
 
     if args['pair'] == 'RJ':
         title = 'Romeo \& Juliet'
     elif args['pair'] == 'TL':
         title = 'Thelma \& Louise'
+    elif args['pair'] == 'RR':
+        title = 'Romulus \& Remus'
 
     def hist(result, xlabel, outname):
         mx = max(result)
@@ -182,10 +184,49 @@ def summary_plots(pair):
         plt.savefig('realizations/{}/{}.png'.format(pair, outname), bbox_inches='tight')
         plt.close()
 
-    total_sats = [sum(cuts[0]) for cuts in results]
+    #total_sats = [sum(cuts[0]) for cuts in skymap_cuts]
+    total_sats = [sum(footprint_cut) for footprint_cut, detectable_cut in skymap_cuts]
     hist(total_sats, 'Satellites in footprint', 'total_sats_hist')
-    detectable_sats = [sum(cuts[0]&cuts[1]) for cuts in results]
+    #detectable_sats = [sum(cuts[0]&cuts[1]) for cuts in skymap_cuts]
+    detectable_sats = [sum(footprint_cut & detectable_cut) for footprint_cut, detectable_cut in skymap_cuts]
     hist(detectable_sats, 'Detectable satellites in foorprint', 'detectable_sats_hist')
+
+    if sats is not None:
+        # Can also do distances
+        if psi is not None:
+            try:
+                idx = range(0,360,6).index(psi)
+            except ValueError:
+                psi_new = int(round(psi/6.)*6)
+                print("psi={} not a multiple of 6, rounding to psi={}".format(psi, psi_new))
+                psi = psi_new
+                idx = range(0,360,6).index(psi)
+
+            footprint_cut = skymap_cuts[idx][0]
+            detectable_cut = skymap_cuts[idx][1]
+
+            bins = np.arange(300, 2030, 75)
+            plt.hist(sats['distance'][footprint_cut], bins=bins, label="In footprint")
+            plt.hist(sats['distance'][footprint_cut & detectable_cut], bins=bins, label="Detectable in footprint")
+            plt.title(title)
+            plt.savefig('realizations/{}/distance_hist_psi={}.png'.format(pair, psi))
+            plt.close()
+
+        else:
+            # Sum over different psis, plot pdf
+            footprint_distances = []
+            and_detectable_distances = []
+            for footprint_cut, detectable_cut in skymap_cuts:
+                footprint_distances.append(sats['distance'][footprint_cut])
+                and_detectable_distances.append(sats['distance'][footprint_cut & detectable_cut])
+            
+            bins = np.arange(300,2030,75)
+            plt.hist(np.concatenate(footprint_distances), bins=bins, label="In footprint", density=True, alpha=0.6)
+            plt.hist(np.concatenate(and_detectable_distances), bins=bins, label="Detectable in footprint", density=True, alpha=0.6)
+            plt.title(title)
+            plt.legend()
+            plt.savefig('realizations/{}/distance_hist.png'.format(pair))
+
 
 
 if __name__ == '__main__':
@@ -207,7 +248,7 @@ if __name__ == '__main__':
         args['fname'] += '.fits'
 
     # Cut satellites to those outside MW virial radius, but < 2 Mpc distance. 
-    if args['table'] or args['psi'] or args['rotations']:
+    if args['table'] or args['psi'] or args['rotations'] or args['summary']:
         sats = predict_satellites.Satellites(args['pair'])
         close_cut = (sats.distance > 300)
         far_cut = (sats.distance < 2000)
@@ -237,7 +278,10 @@ if __name__ == '__main__':
         rotated_skymaps(args['pair'], footprint, sigma_table, sats, sat_cut=cut, n_rotations=60, disruption=args['prob'])
 
     if args['summary']:
-        summary_plots(args['pair'])
+        if args['psi'] is not None:
+            summary_plots(args['pair'], sats[cut], args['psi'])
+        else:
+            summary_plots(args['pair'], sats[cut])
 
 
 def main(): # Needs work on arguments

@@ -6,6 +6,7 @@ from astropy.visualization import make_lupton_rgb
 from photutils.datasets import make_gaussian_sources_image
 import matplotlib.pyplot as plt
 plt.ion()
+import ugali.utils.projector
 
 pix_to_arcsec = 0.236
 pix_to_deg = pix_to_arcsec/3600
@@ -156,8 +157,10 @@ class Image:
         
         # Find where the smaller image sits within the larger image
         
-        small_ra_pix_start = int((big.ra_origin - small.ra_origin)*deg_to_pix)
-        small_dec_pix_start = int((small.dec_origin - big.dec_origin)*deg_to_pix)
+        #small_ra_pix_start = int((big.ra_origin - small.ra_origin)*deg_to_pix)
+        #small_dec_pix_start = int((small.dec_origin - big.dec_origin)*deg_to_pix)
+        small_ra_pix_start = abs(int((big.ra_origin - small.ra_origin)*deg_to_pix))
+        small_dec_pix_start = abs(int((small.dec_origin - big.dec_origin)*deg_to_pix))
 
         """
         ### Option 1: Insert small array into big array
@@ -292,6 +295,7 @@ if __name__ == "__main__":
 
     ra, dec = 4.82, -38.44
     
+    """
     # TucB parameters
     distance = 1400.
     abs_mag = -6.9
@@ -316,17 +320,24 @@ if __name__ == "__main__":
     plt.close()
     """
     # NGC55 candidate paramaters
-    distance = 2000.
-    abs_mag = -10.0
-    r_physical = 3000.
-    ellipticity = 0.0
+    distance = 2200. #kpc
+    abs_mag = -7.9
+    r_physical = 2200 #pc
+    ellipticity = 0.55
     ngc55_sat = simSatellite.SimSatellite(inputs, ra, dec, distance, abs_mag, r_physical, ellipticity, use_completeness=True)
+    # Make an aperature cut to avoid having such a large spatial extent
+    angsep = ugali.utils.projector.angsep(ra, dec, ngc55_sat.stars['RA'], ngc55_sat.stars['DEC'])
+    angsep_sel = angsep < 10.0/60. # deg, SOF aperature was 6.6', so this should be plenty
+    print(np.count_nonzero(angsep_sel))
+    ngc55_sat.stars = ngc55_sat.stars[angsep_sel]
+            
+
     print("Creating NGC55 cand image...")
     fwhm = 1.0
     ngc55 = create_rgb_sat_image(ngc55_sat, fwhm)
     print("Ploting NGC55 cand...")
     plt.figure()
-    ng55.show()
+    ngc55.show()
     plt.savefig("image_plots/ngc55_{}.png".format(fwhm))
     plt.close()
 
@@ -336,4 +347,5 @@ if __name__ == "__main__":
     added.show()
     plt.savefig("image_plots/ngc55_added_{}.png".format(fwhm))
     plt.close()
-    """
+    
+    

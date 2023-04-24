@@ -153,7 +153,6 @@ def inject(region, simSatellite, use_other=True):
     return data, n_stars
 
 
-### Right now, the distance is hardcoded as D = 2000 kpc, mod=26.5 ###
 def search(region, data, mod=26.5):
 # Copied from simple.search
     iso = region.survey.get_isochrone(mod)
