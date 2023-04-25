@@ -3,6 +3,7 @@
 import argparse
 import yaml
 import subprocess
+import os
 
 import numpy as np
 from astropy.table import Table
@@ -95,9 +96,23 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
     subprocess.call('mkdir -p {}'.format(outdir).split())
     outname = outdir + '/psi={}.npy'.format(psideg)
 
-    np.save(outname, np.array(out_array, dtype=object))
+    np.save(outname, np.array(out_array))
+
+    return out_array
     
+def plot_skymap(pair, psi, in_array, sats, sat_cut=None, disruption=None):
     """
+    in_array is the out_array returned by count_skymap. It's of the form
+    in_array[0:3] = [footprint_cut, detectable_cut, sigmas]. 
+    An optional fourth element, survival_cut, is ignored because
+    calculating it on the fly is simple. 
+    """
+    footprint_cut, detectable_cut, sigmas = in_array[0:3]
+    survival_cut = sats['prob'] > disruption
+    if sat_cut is not None:
+        sat_ras, sat_decs = sat_ras[sat_cut], sat_decs[sat_cut]
+        survival_cut = survival_cut[sat_cut]
+
     plt.figure(figsize=(12,8)) 
     smap = skymap.Skymap(projection='mbtfpq', lon_0=0)
     #cmap=plot_utils.shiftedColorMap('seismic_r', min(sigmas), max(sigmas), 6)
@@ -148,14 +163,12 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} disrupted, {}-{} detectable'.format(psideg, n_footprint, n_disrupted, n_detectable, n_removed))
 
 
-    plot_dir = 'realizations/{0}/skymaps_no-fixed-location/'.format(pair)
+    plot_dir = 'realizations/{0}/skymaps_no-fixed-location/plots'.format(pair)
     if disruption is not None:
-        plot_dir += 'disruption={}/'.format(disruption)
-    plt.savefig(plot_dir + '{0}_skymap_psi={1:0>3d}.png'.format(psideg), bbox_inches='tight', dpi=200)
+        plot_dir += '_disruption={}'.format(disruption)
+    subprocess.call("mkdir -p {}".format(plot_dir).split())
+    plt.savefig(plot_dir + '/{0}_skymap_psi={1:0>3d}.png'.format(psideg), bbox_inches='tight', dpi=200)
     plt.close()
-    """
-
-    return out_array
 
 
 def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, disruption=None, n_trials=1, n_rotations=60):
@@ -166,6 +179,7 @@ def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, disrupt
 
     cut_results = []
     for i in range(n_rotations):
+        
         psi = 2*np.pi * float(i)/n_rotations
         cuts = count_skymap(pair, survey, inputs, footprint, sats, sat_cut=sat_cut, psi=psi, disruption=disruption, n_trials=n_trials)
         cut_results.append(cuts)
@@ -191,7 +205,7 @@ def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, disrupt
 
 
 def summary_plots(pair):
-    # TODO haven't changed this since adding disruptino
+    # TODO haven't changed this since adding disruption
     results = np.load('realizations/{0}/{0}_skymap_cuts_no-fixed-location.npy'.format(pair), allow_pickle=True)
 
     if args['pair'] == 'RJ':
@@ -220,6 +234,26 @@ def summary_plots(pair):
     hist(detectable_sats, 'Detectable satellites in foorprint', 'detectable_sats_hist_no-fixed-location')
 
 
+def main(pair, sats, sat_cut=None, disruption=None):
+    # Made to plot no-fixed-locations skymaps copied from HEP. The big skymaps.npy file
+    # couldn't be opened due to python 2/3 compatability errors
+    loc = 'realizations/{}/skymaps_no-fixed-location/'
+    results_dir = loc + 'results_disruption=0.5/'
+    for fname in os.listdir(results_dir):
+        # Get psi
+        idx1 = args['plot_infile'].find('psi=')
+        idx2 = args['plot_infile'].find('.npy')
+        psideg = int(args['plot_infile'][idx1+4:idx2])
+        psi = np.radians(psi)
+
+        in_array = np.load(results_dir + fname)
+
+        plot_skymap(pair, psi, in_array, sats, sat_cut=sat_cut, distruption=disruption)
+
+
+
+
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--pair', default='RJ')
@@ -228,10 +262,12 @@ if __name__ == '__main__':
     p.add_argument('--psi', default=None, type=float)
     p.add_argument('--disruption', '-d', default=None, type=float, help="Disruption threshold")
     p.add_argument('-r', '--rotations', action='store_true')
+    p.add_argument('-p', '--plot_infile', type=str, help="Input .npy file for plots")
     p.add_argument('-s', '--summary', action='store_true')
+    p.add_argument('-m', '--main', action='store_true')
     args = vars(p.parse_args())
 
-    if args['psi'] or args['rotations']:
+    if args['psi'] or args['rotations'] or args['plot_infile'] or args['main']:
         if args['config'] is None:
             raise ValueError("Config required for significance table creation")
         with open(args['config'], 'r') as ymlfile:
@@ -245,16 +281,44 @@ if __name__ == '__main__':
         far_cut = (sats.distance < 2000)
         cut = close_cut & far_cut
         subprocess.call('mkdir -p realizations/{}/skymaps_no-fixed-location'.format(args['pair']).split())
-        footprint = ugali.utils.healpix.read_map('~/data/y6_gold_v2_footprint.fits', nest=True)
-        #footprint = ugali.utils.healpix.read_map('~/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_gold_v2_footprint.fits', nest=True)
+        #footprint = ugali.utils.healpix.read_map('~/data/y6_gold_v2_footprint.fits', nest=True)
+        footprint = ugali.utils.healpix.read_map('~/Research/y6/v2_y6_dwarf_search/candidate-analysis/data/y6_gold_v2_footprint.fits', nest=True)
     
     if args['psi'] is not None:
         psi = np.radians(args['psi'])
         count_skymap(args['pair'], survey, inputs, footprint, sats, sat_cut=cut, psi=psi, disruption=args['disruption'], n_trials=args['n_trials'])
     if args['rotations']:
         rotated_skymaps(args['pair'], survey, inputs, footprint, sats, sat_cut=cut, disruption=args['disruption'], n_rotations=60, n_trials=args['n_trials'])
+    if args['plot_infile']:
+        result = np.load(args['plot_infile'], allow_pickle=True)
+        if len(result.shape) == 2:
+            # Assume array of arrays for many angles
+            n_rotations = len(result) # 60
+            for i in range(len(n_rotations)):
+                psi = 2*np.pi * float(i)/n_rotations
+                print("Plotting skymap for psi={}".format(np.degrees(psi)))
+                plot_skymap(args['pair'], psi, result_array[i], sats, sat_cut=cut, disruption=args['disruption'])
+        elif len(result.shape) == 1:
+            # Assume a single skymap for a single psi
+            if args['psi'] is not None:
+                psi = args['psi']
+            else:
+                print("Psi not specified. Trying to infer from filename")
+                try: 
+                    idx1 = args['plot_infile'].find('psi=')
+                    idx2 = args['plot_infile'].find('.npy')
+                    psideg = int(args['plot_infile'][idx1+4:idx2])
+                    psi = np.radians(psi)
+                except:
+                    print("Unknown psi. Try again")
+                    raise(Exception)
+            in_array = np.load(args['plot_infile'], allow_pickle=True)
+            plot_skymap(args['pair'], psi, in_array, sats, sat_cut=cut, disruption=args['disruption'])
 
     if args['summary']:
         summary_plots(args['pair'])
+
+    if args['main']:
+        main(args['pair'], sats, sat_cut=cut, disruption=args['disruption'])
 
 
