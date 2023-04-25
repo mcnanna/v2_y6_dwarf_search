@@ -73,7 +73,11 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         sigmas[i] = np.mean(sigs)
         percent.bar(i+1, np.count_nonzero(footprint_cut))
 
-    detectable_cut = (sigmas >= 6.0)
+    detectable_cut = np.file(False, len(footprint_cut))
+    detectable_cut[footprint_cut] = (sigmas >= 6.0)
+    # Resize sigmas to match other array lengths
+    sigma_array = np.tile(0.0, len(footprint_cut))
+    sigma_array[footprint_cut] = sigmas
 
     n_footprint = np.count_nonzero(footprint_cut)
     n_detectable = np.count_nonzero(detectable_cut)
@@ -82,13 +86,13 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         if sat_cut is not None:
             survival_cut = survival_cut[sat_cut]
         n_disrupted = np.count_nonzero(~survival_cut & footprint_cut) # Disrupted in footprint
-        n_removed = np.count_nonzero(~survival_cut[footprint_cut] & detectable_cut) # Would be detectable but disrupted
+        n_removed = np.count_nonzero(~survival_cut & detectable_cut) # Would be detectable but disrupted
         #print("psi = {}: {} total sats, {} disrupted, {}-{} detectable".format(psideg, n_footprint, n_disrupted, n_detectable, n_removed))
     #else:
         #print("psi = {}: {} total sats, {} detectable".format(psideg, np.count_nonzero(footprint_cut), np.count_nonzero(detectable_cut)))
 
     outdir = 'realizations/{}/skymaps_no-fixed-location/results'.format(pair)
-    out_array = [footprint_cut, detectable_cut, sigmas]
+    out_array = [footprint_cut, detectable_cut, sigma_array]
     if disruption is not None:
         outdir += '_disruption={}'.format(disruption)
         out_array += [survival_cut]
@@ -138,7 +142,7 @@ def plot_skymap(pair, psi, in_array, sats, sat_cut=None, disruption=None):
         return sc
     custom_scatter(smap, sat_ras[~footprint_cut], sat_decs[~footprint_cut], c='0.4', latlon=True, s=out_sizes, markers=out_markers)
     #custom_scatter(smap, sat_ras[footprint_cut], sat_decs[footprint_cut], c=sigmas, cmap=cmap, latlon=True, s=in_sizes, markers=in_markers, edgecolors='k', linewidths=0.2)
-    custom_scatter(smap, sat_ras[footprint_cut], sat_decs[footprint_cut], c=sigmas, cmap=cmap, vmin=2.2, vmax=37.5, latlon=True, s=in_sizes, markers=in_markers, edgecolors='k', linewidths=0.2)
+    custom_scatter(smap, sat_ras[footprint_cut], sat_decs[footprint_cut], c=sigmas[footprint_cut], cmap=cmap, vmin=2.2, vmax=37.5, latlon=True, s=in_sizes, markers=in_markers, edgecolors='k', linewidths=0.2)
     if disruption is not None:
         custom_scatter(smap, sat_ras[~footprint_cut & ~survival_cut], sat_decs[~footprint_cut & ~survival_cut], c='0.4', latlon=True, s=disrupted_out_sizes, markers=disrupted_out_markers)
         custom_scatter(smap, sat_ras[footprint_cut & ~survival_cut], sat_decs[footprint_cut & ~survival_cut], c='k', latlon=True, s=disrupted_in_sizes, markers=disrupted_in_markers)
