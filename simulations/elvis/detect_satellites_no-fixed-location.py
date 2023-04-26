@@ -73,7 +73,7 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         sigmas[i] = np.mean(sigs)
         percent.bar(i+1, np.count_nonzero(footprint_cut))
 
-    detectable_cut = np.file(False, len(footprint_cut))
+    detectable_cut = np.tile(False, len(footprint_cut))
     detectable_cut[footprint_cut] = (sigmas >= 6.0)
     # Resize sigmas to match other array lengths
     sigma_array = np.tile(0.0, len(footprint_cut))
@@ -98,7 +98,7 @@ def count_skymap(pair, survey, inputs, footprint, sats, sat_cut=None, psi=None, 
         out_array += [survival_cut]
 
     subprocess.call('mkdir -p {}'.format(outdir).split())
-    outname = outdir + '/psi={}.npy'.format(psideg)
+    outname = outdir + '/psi={:0>3}.npy'.format(psideg)
 
     np.save(outname, np.array(out_array))
 
@@ -112,7 +112,11 @@ def plot_skymap(pair, psi, in_array, sats, sat_cut=None, disruption=None):
     calculating it on the fly is simple. 
     """
     footprint_cut, detectable_cut, sigmas = in_array[0:3]
+    footprint_cut = footprint_cut.astype(bool)
+    detectable_cut = detectable_cut.astype(bool)
     survival_cut = sats['prob'] > disruption
+
+    sat_ras, sat_decs = sats.ra_dec(psi)
     if sat_cut is not None:
         sat_ras, sat_decs = sat_ras[sat_cut], sat_decs[sat_cut]
         survival_cut = survival_cut[sat_cut]
@@ -148,7 +152,8 @@ def plot_skymap(pair, psi, in_array, sats, sat_cut=None, disruption=None):
         custom_scatter(smap, sat_ras[footprint_cut & ~survival_cut], sat_decs[footprint_cut & ~survival_cut], c='k', latlon=True, s=disrupted_in_sizes, markers=disrupted_in_markers)
     plt.colorbar()
     #Add DES polygon
-    des_poly = np.genfromtxt('/afs/hep.wisc.edu/home/mcnanna/data/round19_v0.txt',names=['ra','dec'])
+    #des_poly = np.genfromtxt('/afs/hep.wisc.edu/home/mcnanna/data/round19_v0.txt',names=['ra','dec'])
+    des_poly = np.genfromtxt('/Users/mcnanna/Research/y3-mw-sats/data/round19_v0.txt',names=['ra','dec'])
     smap.plot(des_poly['ra'], des_poly['dec'], latlon=True, c='0.25', lw=3, alpha=0.3, zorder=0)
     #Add MW disk
     disk_points = sats.halos.mw_disk()
@@ -167,19 +172,19 @@ def plot_skymap(pair, psi, in_array, sats, sat_cut=None, disruption=None):
         plt.title('$\psi = {}^{{\circ}}$; {} total sats in footprint, {} disrupted, {}-{} detectable'.format(psideg, n_footprint, n_disrupted, n_detectable, n_removed))
 
 
-    plot_dir = 'realizations/{0}/skymaps_no-fixed-location/plots'.format(pair)
+    plot_dir = 'realizations/{0}/skymaps_no-fixed-location'.format(pair)
     if disruption is not None:
         plot_dir += '_disruption={}'.format(disruption)
     subprocess.call("mkdir -p {}".format(plot_dir).split())
-    plt.savefig(plot_dir + '/{0}_skymap_psi={1:0>3d}.png'.format(psideg), bbox_inches='tight', dpi=200)
+    plt.savefig(plot_dir + '/{0}_skymap_psi={1:0>3d}.png'.format(pair, psideg), bbox_inches='tight', dpi=200)
     plt.close()
 
 
 def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, disruption=None, n_trials=1, n_rotations=60):
-    plot_dir = 'realizations/{}/skymaps_no-fixed-location/'.format(pair)
-    if disruption is not None:
-        plot_dir += '_disruption={}/'.format(disruption)
-    subprocess.call('mkdir -p {}'.format(plot_dir).split())
+    #plot_dir = 'realizations/{}/skymaps_no-fixed-location/'.format(pair)
+    #if disruption is not None:
+    #    plot_dir += '_disruption={}/'.format(disruption)
+    #subprocess.call('mkdir -p {}'.format(plot_dir).split())
 
     cut_results = []
     for i in range(n_rotations):
@@ -195,27 +200,17 @@ def rotated_skymaps(pair, survey, inputs, footprint, sats, sat_cut=None, disrupt
         outname += '_disruption={}'.format(disruption)
     np.save(outname,cut_results)
     
-    """
-    # Merge skymaps into a .gif
-    print('\nCreating .gif...')
-    outname = 'realizations/{}/{}_skymap_no-fixed_location'.format(pair)
-    if disruption is not None:
-        outname += '_disruption={}'.format(disruption)
-    outname += '.gif'
-    subprocess.call("convert -delay 30 -loop 0 {}*.png {}".format(plot_dir, outname).split())
-    print('Done!')
-    """
 
-
-
-def summary_plots(pair):
-    # TODO haven't changed this since adding disruption
-    results = np.load('realizations/{0}/{0}_skymap_cuts_no-fixed-location.npy'.format(pair), allow_pickle=True)
+def summary_plots(pair, sats=None, disruption=None):
+    skymap_cuts = np.load('realizations/{0}/{0}_skymap_cuts_no-fixed-location.npy'.format(pair), allow_pickle=True)
+    # This is a len=60 array, one item for each psi. Each entry is an arrray [footprint_cut, detectable_cut, sigmas]
 
     if args['pair'] == 'RJ':
         title = 'Romeo \& Juliet'
     elif args['pair'] == 'TL':
         title = 'Thelma \& Louise'
+    elif args['pair'] == 'RR':
+        title = 'Romulus \& Remus'
 
     def hist(result, xlabel, outname):
         mx = max(result)
@@ -228,14 +223,49 @@ def summary_plots(pair):
             xticks = range(mx+1)
             plt.xticks(xticks)
         plt.xlabel(xlabel)
-        plt.title(title)
+        plt.title(title + ": med = {}; $\mu = {}$; $\sigma = {}$".format(np.median(result), round(np.mean(result),1), round(np.std(result),1)))
         plt.savefig('realizations/{}/{}.png'.format(pair, outname), bbox_inches='tight', dpi=200)
         plt.close()
 
-    total_sats = [np.count_nonzero(cuts[0]) for cuts in results]
-    hist(total_sats, 'Satellites in footprint', 'total_sats_hist_no-fixed-location')
-    detectable_sats = [np.count_nonzero(cuts[1]) for cuts in results]
-    hist(detectable_sats, 'Detectable satellites in foorprint', 'detectable_sats_hist_no-fixed-location')
+    # Total sats in footprint
+    total_sats = [np.count_nonzero(cuts[0]) for cuts in skymap_cuts]
+    hist(total_sats, 'Galaxies in footprint', 'total_gals_hist_no-fixed-location')
+
+    # Detectable sats, optional surivival criterion as well
+    if disruption is None:
+        detectable_sats = [np.count_nonzero(cuts[1]) for cuts in skymap_cuts]
+        hist(detectable_sats, 'Detectable galaxies in footprint', 'detectable_gals_hist_no-fixed-location')
+    elif sats is None:
+        print("Cannot calculate disruption without sats")
+        raise(Exception)
+    else:
+        survival_sel = sats['prob'] > disruption
+        detectable_sats = [np.count_nonzero(cuts[1].astype(bool) & survival_sel) for cuts in skymap_cuts]
+        hist(detectable_sats, "Detectable survivng galaxies in footprint", "detectable_gals_hist_no-fixed-location_disruption={}".format(round(disruption,1)))
+
+    # Distance distribution
+    if sats is not None: 
+        footprint_distances = []
+        and_detectable_distances = []
+        for psi_cuts in skymap_cuts:
+            footprint_cut = psi_cuts[0].astype(bool)
+            detectable_cut = psi_cuts[1].astype(bool)
+            footprint_distances.append(sats['distance'][footprint_cut])
+            if disruption is None:
+                and_detectable_distances.append(sats['distance'][detectable_cut])
+            else:
+                and_detectable_distances.append(sats['distance'][detectable_cut & survival_sel])
+        
+        bins = np.arange(300,2030,75)
+        plt.hist(np.concatenate(footprint_distances), bins=bins, label="In footprint", density=True, alpha=0.6)
+        plt.hist(np.concatenate(and_detectable_distances), bins=bins, label="Detectable in footprint", density=True, alpha=0.6)
+        plt.title(title)
+        plt.legend()
+        outname = 'realizations/{}/distance_hist_no-fixed-location'.format(pair)
+        if disruption is not None:
+            outname += '_disruption={}'.format(round(disruption,1))
+        outname += '.png'
+        plt.savefig(outname, bbox_inches='tight', dpi=200)
 
 
 def main(pair, sats, sat_cut=None, disruption=None):
@@ -271,7 +301,7 @@ if __name__ == '__main__':
     p.add_argument('-m', '--main', action='store_true')
     args = vars(p.parse_args())
 
-    if args['psi'] or args['rotations'] or args['plot_infile'] or args['main']:
+    if args['psi'] or args['rotations'] or args['plot_infile'] or args['summary'] or args['main']:
         if args['config'] is None:
             raise ValueError("Config required for significance table creation")
         with open(args['config'], 'r') as ymlfile:
@@ -280,7 +310,7 @@ if __name__ == '__main__':
             inputs = load_data.Inputs(cfg)
 
         sats = predict_satellites.Satellites(args['pair'])
-        # Cut satellites to those outside MW virial radius, but < 2 Mpc distance. 
+        # Cut galaxies to those outside MW virial radius, but < 2 Mpc distance. 
         close_cut = (sats.distance > 300)
         far_cut = (sats.distance < 2000)
         cut = close_cut & far_cut
@@ -294,15 +324,28 @@ if __name__ == '__main__':
     if args['rotations']:
         rotated_skymaps(args['pair'], survey, inputs, footprint, sats, sat_cut=cut, disruption=args['disruption'], n_rotations=60, n_trials=args['n_trials'])
     if args['plot_infile']:
-        result = np.load(args['plot_infile'], allow_pickle=True)
-        if len(result.shape) == 2:
+        result = np.load(args['plot_infile'])
+        if len(result) > 4:
             # Assume array of arrays for many angles
             n_rotations = len(result) # 60
-            for i in range(len(n_rotations)):
+            for i in range(n_rotations):
                 psi = 2*np.pi * float(i)/n_rotations
                 print("Plotting skymap for psi={}".format(np.degrees(psi)))
-                plot_skymap(args['pair'], psi, result_array[i], sats, sat_cut=cut, disruption=args['disruption'])
-        elif len(result.shape) == 1:
+                plot_skymap(args['pair'], psi, result[i], sats, sat_cut=cut, disruption=args['disruption'])
+
+            # Merge skymaps into a .gif
+            plot_dir = 'realizations/{0}/skymaps_no-fixed-location'.format(args['pair'])
+            if args['disruption'] is not None:
+                plot_dir += '_disruption={}'.format(args['disruption'])
+            print('\nCreating .gif...')
+            outname = plot_dir + '/{}_skymaps_no-fixed-location'.format(args['pair'])
+            if disruption is not None:
+                outname += '_disruption={}'.format(disruption)
+            outname += '.gif'
+            subprocess.call("convert -delay 30 -loop 0 {}/*.png {}".format(plot_dir, outname).split())
+            print('Done!')
+
+        else:
             # Assume a single skymap for a single psi
             if args['psi'] is not None:
                 psi = args['psi']
@@ -316,11 +359,11 @@ if __name__ == '__main__':
                 except:
                     print("Unknown psi. Try again")
                     raise(Exception)
-            in_array = np.load(args['plot_infile'], allow_pickle=True)
+            in_array = np.load(args['plot_infile'])
             plot_skymap(args['pair'], psi, in_array, sats, sat_cut=cut, disruption=args['disruption'])
 
     if args['summary']:
-        summary_plots(args['pair'])
+        summary_plots(args['pair'], sats=sats[cut], disruption=args['disruption'])
 
     if args['main']:
         main(args['pair'], sats, sat_cut=cut, disruption=args['disruption'])
