@@ -4,7 +4,7 @@ import yaml
 import astropy.io.fits as fits
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse, Circle
+from matplotlib.patches import Rectangle
 
 import simple.survey
 import simple.search
@@ -51,7 +51,7 @@ def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, distance, o
                 region.data = data
                 sig = simSatellite.search(region, data, mod=ugali.utils.projector.distanceToDistanceModulus(distance))
                 sigmas.append(sig)
-                if k == 0 and sig > 37.4 : # No need to keep simulating if it's just going to max out
+                if k == 0 and sig > 37.4 and n_trials > 1: # No need to keep simulating if it's just going to max out
                     print "Stopping trials due to high significance"
                     break
 
@@ -157,6 +157,21 @@ def plot_sigma_matrix(fname, distance):
         mx = axis_vals[-1] + delta/2.
         return ((value-mn)/(mx-mn)) * len(axis_vals)
 
+    #Draw line at M_V = -12
+    if x == 'abs_mag':
+        pass
+    if y == 'abs_mag':
+        yval = transform(-12.0, y_vals, dic[y]['scale']=='log')
+        #ax.axhline(yval, linestyle='--', color='k')
+        width = transform(xmax, x_vals, dic[x]['scale']=='log')+0.5
+
+        if dic[y]['reverse'] == True:
+            bottom = yval
+            top = transform(ymin, y_vals, dic[y]['scale']=='log') + 0.5
+            height = top - bottom
+        rect = Rectangle((0, bottom), width, height, hatch='\\', facecolor = cmap(1.0), zorder=50)
+        ax.add_patch(rect)
+
 
     
     # Place known sats on plot (from mw_sats_master.csv):
@@ -177,7 +192,7 @@ def plot_sigma_matrix(fname, distance):
 
     sat_xs = transform(dwarfs[translation[x]], x_vals, dic[x]['scale']=='log')
     sat_ys = transform(dwarfs[translation[y]], y_vals, dic[y]['scale']=='log')
-    plt.scatter(sat_xs, sat_ys, color='k')
+    plt.scatter(sat_xs, sat_ys, color='k', zorder=100)
     """
     #down = ['Boo II', 'Pic I', 'Ret II', 'Phe II', 'Leo V', 'Hyi I', 'UMa II']
     #left = ['Phe II', 'Gru II', 'Psc II', 'Com', 'Sex', 'UMa II', 'Pic II']
@@ -216,7 +231,7 @@ def plot_sigma_matrix(fname, distance):
     sat_xs = transform(ngc_sats[translation[x]], x_vals, dic[x]['scale']=='log')
     sat_ys = transform(ngc_sats[translation[y]], y_vals, dic[y]['scale']=='log')
     #plt.scatter(sat_xs, sat_ys, color='k', marker='*', s=100)
-    plt.scatter(sat_xs, sat_ys, color='k', marker='x')
+    plt.scatter(sat_xs, sat_ys, color='k', marker='x', zorder=101)
     down = ['UGCA438']
     left = []
     for i, d in enumerate(ngc_sats):
@@ -233,22 +248,22 @@ def plot_sigma_matrix(fname, distance):
 
         if d['name'] == 'ESO294-010':
             xytext = [17, -15]
-            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va='top', fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'),
+            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va='top', fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104,
                     arrowprops=dict(arrowstyle='-'))
         elif d['name'] == 'ESO410-005':
             xytext = [30, 12]
-            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'),
+            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104,
                     arrowprops=dict(arrowstyle='-'))
 
         else: 
-            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'))
+            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
 
 
 
     # Place known LG dwarfs on plot (from McConnachie2015):
     plt.sca(ax)
-    #TODO: r_physical vs a_physical: a_physical seems to be more commonly used, and make the figure look better imo
-    translation = {'distance':'distanc', 'abs_mag':'m_v', 'r_physical':'a_physical'}
+    #TODO: _physical vs a_physical: a_physical seems to be more commonly used, and make the figure look better imo
+    translation = {'distance':'distance', 'abs_mag':'m_v', 'r_physical':'a_physical'}
     dwarfs = load_data.McConnachie15().data
     cut = xmin < dwarfs[translation[x]]
     cut &= dwarfs[translation[x]] < xmax
@@ -267,7 +282,7 @@ def plot_sigma_matrix(fname, distance):
 
     sat_xs = transform(dwarfs[translation[x]], x_vals, dic[x]['scale']=='log')
     sat_ys = transform(dwarfs[translation[y]], y_vals, dic[y]['scale']=='log')
-    plt.scatter(sat_xs[non_sat_cut], sat_ys[non_sat_cut], color='k', marker='x')
+    plt.scatter(sat_xs[non_sat_cut], sat_ys[non_sat_cut], color='k', marker='x', zorder=101)
     plt.scatter(sat_xs[and_cut], sat_ys[and_cut], color='k', marker='s', zorder=102)
 
     """
@@ -312,7 +327,7 @@ def plot_sigma_matrix(fname, distance):
    
     # Add approximate candidate location
     #cand_x, cand_y = 3300, -10
-    cand_x, cand_y = 3256, -7.9 # Based on values from mcmc_tight_qual
+    cand_x, cand_y = 2185, -7.9 # Based on values from mcmc_tight_qual
     cand_x = transform(cand_x, x_vals, dic[x]['scale']=='log')
     cand_y = transform(cand_y, y_vals, dic[y]['scale']=='log')
     plt.scatter(cand_x, cand_y, marker='*', color='yellow', edgecolor='k', s=700, zorder=101)
@@ -320,7 +335,7 @@ def plot_sigma_matrix(fname, distance):
     
 
     outname = '{}_vs_{}__'.format(x, y) + '{}={}'.format('distance', int(distance))
-    plt.savefig('{}.eps'.format(outname), bbox_inches='tight')
+    #plt.savefig('{}.eps'.format(outname), bbox_inches='tight')
     plt.savefig('{}.png'.format(outname), bbox_inches='tight')
     plt.close()
 
@@ -333,6 +348,7 @@ if __name__ == "__main__":
     parser.add_argument('--ra', required=True, type=float)
     parser.add_argument('--dec', required=True, type=float)
     parser.add_argument('--distance', type=float, default=2000, help="kpc")
+    parser.add_argument('--n_trials', '-n', type=int, default=1)
     #parser.add_argument('--distance', required=True, type=float)
     #parser.add_argument('--mod', required=True, type=float)
     #parser.add_argument('--r', required=True, type=float, help="Aperture size (arcmin)")
@@ -354,8 +370,8 @@ if __name__ == "__main__":
     log_r_physical_pcs = np.arange(1.4, 3.8, 0.2)
     r_physicals = 10**log_r_physical_pcs
 
-    outname = 'sigma_table_10trials__{}kpc'.format(int(args['distance']))
-    create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, args['distance'], outname=outname, n_trials=10)
+    outname = 'sigma_table_{}trials__{}kpc'.format(args['n_trials'], int(args['distance']))
+    create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, args['distance'], outname=outname, n_trials=args['n_trials'])
 
     plot_sigma_matrix(outname, args['distance'])
 

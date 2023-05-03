@@ -49,7 +49,6 @@ class SimSatellite:
         iso_type = type(ugali.isochrone.factory(name='Bressan2012'))
         iso = simple.isochrone.get_isochrone(iso_type, survey='des', age=12., z=0.0001, distance_modulus=distance_modulus)
         s.set_isochrone(iso)
-        # Simulate takes stellar mass as an argument, NOT richness
         mag_g, mag_r, mag_i = s.isochrone.simulate(abs_mag) 
 
         lon, lat = s.kernel.sample_lonlat(len(mag_r))
