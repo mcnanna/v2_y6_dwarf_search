@@ -76,21 +76,26 @@ class Inputs:
         d = np.recfromcsv(infile)
 
         x = d['mag_r']
-        y = d['eff_star']
+        y1 = d['eff']
+        y2 = d['eff_star']
 
         x = np.insert(x, 0, 16.)
-        y = np.insert(y, 0, y[0])
+        y1 = np.insert(y1, 0, y1[0])
+        y2 = np.insert(y2, 0, y2[0])
 
-        f = scipy.interpolate.interp1d(x, y, bounds_error=False, fill_value=0.)
+        f1 = scipy.interpolate.interp1d(x, y1, bounds_error=False, fill_value=0.)
+        f2 = scipy.interpolate.interp1d(x, y2, bounds_error=False, fill_value=0.)
 
-        return f
+        return f1, f2
 
     def __init__(self, cfg):
         datadir = cfg['catalog']['dirname'] + '/../'
         cmpltdir = '/Users/mcnanna/Research/y6/v2_y6_dwarf_search/simulations/completeness/'
 
         self.log_photo_error = self.getPhotoError(cmpltdir + 'photo_error_model.csv')
-        self.completeness = self.getCompleteness(cmpltdir + 'y6_gold_v2_stellar_classification_summary_r_ext2_merge.csv')
+        eff, eff_star = self.getCompleteness(cmpltdir + 'y6_gold_v2_stellar_classification_summary_r_ext2_merge.csv')
+        self.efficiency = eff
+        self.completeness = eff_star
 
         self.m_maglim_g = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_g_depth.fits')
         self.m_maglim_r = ugali.utils.healpix.read_map(datadir + 'y6_gold_2_0_decasu_bdf_nside4096_r_depth.fits')
@@ -102,7 +107,8 @@ class Inputs:
 
 class Satellites:
     def __init__(self):
-        self.master = np.recfromcsv('/Users/mcnanna/Research/y3-mw-sats/data/mw_sats_master_extra.csv')
+        self.master = np.recfromcsv('/Users/mcnanna/Research/y3-mw-sats/data/mw_sats_master_2023_extra.csv')
+        #self.master = np.recfromcsv('/Users/mcnanna/Research/y3-mw-sats/data/mw_sats_master_extra.csv')
         self.all = self.master[np.where(self.master['type2'] >= 0)[0]]
         self.dwarfs = self.master[np.where(self.master['type2'] >= 3)[0]]
         

@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 base = """\\begin{deluxetable}{l c c }
 \\tabletypesize{\\footnotesize}
-\\tablecaption{\label{table:properties} Candidate Galaxy Properties}
+\\tablecaption{\label{tab:properties} Candidate Galaxy Properties}
 \\tablehead{\colhead{Parameter} & \colhead{Value} & \colhead{Units}}
 \startdata
 """
@@ -25,7 +25,7 @@ quants['metallicity'] = ['$Z$', 1, '\ldots', 1e4] # Special case with 10^{-4} af
 #\hline
 quants['Mv'] = ['$M_V$', 1, '\magn', 1., True]
 quants['luminosity'] = ['$L_V$', 1, '10^5 \Lsolar', 1e-5]
-quants['surface_brightness'] = ['$\mu$', 1, '\magn arcsec^{-2}', 1., True] # Special case with no errors
+quants['surface_brightness'] = ['$\mu_0$', 1, '\magn arcsec^{-2}', 1., True] # Special case with no errors
 quants['mass'] = ['$M_*$', 2, '10^5 \Msolar', 1e-5]
 quants['feh'] = ['{[Fe/H]}', 1, 'dex'] # Special case with no errors
 quants['glon'] = ['$l$', 3, 'deg']
@@ -46,7 +46,7 @@ def errs(name):
     #print(c, ' +',p-c, ' -',c-m)  
     return np.array([c, p-c, c-m])  
 
-with open('/Users/mcnanna/Research/ngc55/mcmc/mcmc_tight_qual/ngc55_cand_mcmc.yaml') as ymlfile:
+with open('/Users/mcnanna/Research/ngc55/mcmc/mcmc_tight_qual_50k/ngc55_cand_mcmc.yaml') as ymlfile:
     y = yaml.load(ymlfile)
 
 

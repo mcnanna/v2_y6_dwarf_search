@@ -52,7 +52,7 @@ def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, distance, o
                 sig = simSatellite.search(region, data, mod=ugali.utils.projector.distanceToDistanceModulus(distance))
                 sigmas.append(sig)
                 if k == 0 and sig > 37.4 and n_trials > 1: # No need to keep simulating if it's just going to max out
-                    print "Stopping trials due to high significance"
+                    #print "Stopping trials due to high significance"
                     break
 
             sigma = np.mean(sigmas)
@@ -71,12 +71,13 @@ def create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, distance, o
     return sigma_fits
 
 
-def plot_sigma_matrix(fname, distance):
+def plot_sigma_matrix(fname, distance, write=True):
     # Mainly copied from ~/Research/y6/far_out/significance.py. An even more general version is found there
 
     dic = {'distance': {'label':'$D$', 'conversion': lambda d:int(d), 'unit':'kpc', 'scale':'linear', 'reverse':False}, 
            'abs_mag': {'label':'$M_V$', 'conversion': lambda v:round(v,1), 'unit':'mag', 'scale':'linear', 'reverse':True},
-           'r_physical': {'label':'$r_{1/2}$', 'conversion': lambda r:int(round(r,0)), 'unit':'pc', 'scale':'log', 'reverse':False},
+           #'r_physical': {'label':'$r_{1/2}$', 'conversion': lambda r:int(round(r,0)), 'unit':'pc', 'scale':'log', 'reverse':False},
+           'r_physical': {'label':'$\log_{10}r_{1/2}$', 'conversion': lambda r:round(np.log10(r),1), 'unit':'pc', 'scale':'log', 'reverse':False},
            'stellar_mass': {'label':'$M_*$', 'conversion': lambda m: '$10^{{{}}}$'.format(round(np.log10(m),1)), 'unit':'$M_{\odot}$', 'scale':'log', 'reverse':False},
            }
     def is_near(arr, val, e=0.001):
@@ -95,9 +96,17 @@ def plot_sigma_matrix(fname, distance):
             line = table[is_near(table[x], x_val) & is_near(table[y], y_val)]
             mat_sigma[i,j] = line['sigma']
     
+    # Fudging
+    floor = np.min(mat_sigma)
+    new_floor = 2.2
+    for i in range(len(mat_sigma)):
+        for j in range(len(mat_sigma[0])):
+            if mat_sigma[i,j] < 6:
+                mat_sigma[i,j] = (mat_sigma[i,j]-floor)/(6-floor)*(6-new_floor) + new_floor
+
 
     plt.figure(figsize=((len(x_vals)+3)*0.8, (len(y_vals)/2.0)*0.6))
-    
+
     mn, mid, mx = 0, 6, 37.5
     norm = matplotlib.colors.Normalize
     cmap = plot_utils.shiftedColorMap('bwr_r', mn, mx, mid)
@@ -166,14 +175,69 @@ def plot_sigma_matrix(fname, distance):
         width = transform(xmax, x_vals, dic[x]['scale']=='log')+0.5
 
         if dic[y]['reverse'] == True:
-            bottom = yval
+            bottom = yval + 0.5 # Extra 0.5 because the -12 square ends above the -12 tick
             top = transform(ymin, y_vals, dic[y]['scale']=='log') + 0.5
             height = top - bottom
-        rect = Rectangle((0, bottom), width, height, hatch='\\', facecolor = cmap(1.0), zorder=50)
+        matplotlib.rcParams["hatch.color"] = 'w'
+        rect = Rectangle((0, bottom), width, height, hatch='/', facecolor = 'none', zorder=50)
         ax.add_patch(rect)
 
+    # Indicate region with blending
+    # TODO: Automate the density calculation in calc_sigma_matrix. Right now I'm loading results 
+    # calulcated in blending.ipynb. The three values for each (r_physical, abs_mag) pair are the 
+    # arcmin^-2 densities withing 1/2 r_h, r_h, and 2 r_h respectively
+    blended_x = []
+    blended_y = []
 
-    
+    densities = np.load('densities_cutoff.npy')
+    blend_cut = densities > 1 # arcmin^-2
+    for i in range(densities.shape[0]): # r_physicals
+        for j in range(densities.shape[1]): # abs_mags
+            #if True in blend_cut[i, j]:
+            if blend_cut[i,j][0]: # > 1 arcsec^-2 inside 0.5*r_h
+                blended_x.append(x_vals[i])
+                blended_y.append(y_vals[j])
+
+    blended_x = transform(blended_x, x_vals, dic[x]['scale'] == 'log')
+    blended_y = transform(blended_y, y_vals, dic[y]['scale'] == 'log')
+    matplotlib.rcParams["hatch.color"] = '0.1'
+    for x_center, y_center in zip(blended_x, blended_y):
+        rect = Rectangle((x_center-0.5, y_center-0.5), 1, 1, facecolor='none', hatch='\\', zorder=51)
+        ax.add_patch(rect)
+
+    """
+    # Place approximate LSST sensitivity curve
+    # Curves derived from https://arxiv.org/abs/2105.01658
+    plt.sca(ax)
+    if x == 'r_physical' and y == 'abs_mag':
+        # D = 1.5
+        log_r_start, log_r_stop, step = 1.2, 3.4, 0.2
+        #log_r_points = np.arange(log_r_start, log_r_stop+step/2., step) # Create basic array of points
+        #log_r_points = np.clip(log_r_points, 1.3, None) # Clip to not go off the plot
+        #log_r_points = np.sort(np.concatenate((log_r_points[:-1], log_r_points[1:]-0.001))) # Duplicate points with a light offset
+        log_r_points = np.arange(log_r_start, log_r_stop, step)
+        log_r_points = log_r_points[1:] + 0.1
+
+        mv_bottoms = np.array([-5.5, -4.5, -4.5, -4.5, -4.5, -5.5, -5.5, -6.5, -6.5, -7.5, -7.5])
+        #mv_points = np.repeat(mv_bottoms, 2)
+        mv_points = mv_bottoms[1:] - 0.22 # Adjument from 1.5 to 2.0 Mpc. Calculated by taking ~25% of the decrease going from 1.5 to 3.5. 
+                                          # The original adjustment was 0.42 as calculatued above, but that seemed a bit harsh given the 
+                                          # high probability of detection in most of the regions. 
+
+
+        r_points = transform(10**log_r_points, x_vals, dic[x]['scale']=='log') # Transform to axis coordinates
+        mv_points = transform(mv_points, y_vals, dic[y]['scale']=='log')
+        plt.plot(r_points, mv_points, c='k', linestyle='--')
+
+        #r_points = transform(10**log_r_points, x_vals, dic[x]['scale']=='log')
+        #mv_points = transform(mv_points, y_vals, dic[y]['scale']=='log')
+        #plt.plot(r_points, mv_points, c='k')
+        
+        # D = 3.5
+        #log_r_start, log_r_stop, step = 1.8, 3.6, 0.2
+        #mv_bottoms = np.array([-7.0, -6.5, -7.0, -7.5, -7.5, -8.0, -8.5, -9.5, -10.5])
+    """
+
     # Place known sats on plot (from mw_sats_master.csv):
     plt.sca(ax)
     translation = {'distance':'distance_kpc', 'abs_mag':'m_v', 'r_physical':'a_physical'}
@@ -184,7 +248,7 @@ def plot_sigma_matrix(fname, distance):
     cut &= dwarfs[translation[y]] < ymax
     #cut &= np.array(['des' in survey for survey in dwarfs['survey']])
 
-    ngc_sat_names = ['ESO410-005', 'ESO294-010', 'UGCA438']
+    ngc_sat_names = ['ESO410-005G', 'ESO294-010', 'UGCA438']
     ngc_cut = np.array([name in ngc_sat_names for name in dwarfs['name']])
     ngc_sats = dwarfs[cut & ngc_cut]
 
@@ -217,25 +281,9 @@ def plot_sigma_matrix(fname, distance):
     names = ['Antlia II', 'Crater II', 'Sagittarius']
     named_cut = [d['name'] in names for d in dwarfs]
     down = ['Crater II']
+    left = ['Crater II']
     for i, d in enumerate(dwarfs[named_cut]):
         xy = (sat_xs[named_cut][i], sat_ys[named_cut][i])
-        xytext = [3,3]
-        ha = 'left'
-        va = 'bottom'
-        if d['name'] in down:
-            va = 'top'
-            xytext[1] = -3
-
-        plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'))
-
-    sat_xs = transform(ngc_sats[translation[x]], x_vals, dic[x]['scale']=='log')
-    sat_ys = transform(ngc_sats[translation[y]], y_vals, dic[y]['scale']=='log')
-    #plt.scatter(sat_xs, sat_ys, color='k', marker='*', s=100)
-    plt.scatter(sat_xs, sat_ys, color='k', marker='x', zorder=101)
-    down = ['UGCA438']
-    left = []
-    for i, d in enumerate(ngc_sats):
-        xy = (sat_xs[i], sat_ys[i])
         xytext = [3,3]
         ha = 'left'
         va = 'bottom'
@@ -246,23 +294,51 @@ def plot_sigma_matrix(fname, distance):
             ha = 'right'
             xytext[0] = -3
 
+        plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
+
+    sat_xs = transform(ngc_sats[translation[x]], x_vals, dic[x]['scale']=='log')
+    sat_ys = transform(ngc_sats[translation[y]], y_vals, dic[y]['scale']=='log')
+    #plt.scatter(sat_xs, sat_ys, color='k', marker='*', s=100)
+    plt.scatter(sat_xs, sat_ys, color='k', marker='x', zorder=101)
+    down = ['ESO294-010', 'UGCA438']
+    left = ['ESO294-010', 'UGCA438']
+    for i, d in enumerate(ngc_sats):
+        xy = (sat_xs[i], sat_ys[i])
+        xytext = [3,3]
+        ha = 'left'
+        va = 'bottom'
+        
+        if d['name'] in down:
+            va = 'top'
+            xytext[1] = -3
+        if d['name'] in left:
+            ha = 'right'
+            xytext[0] = -3
+
+        if d['name'] == 'ESO410-005G':
+            xytext = [-18, 3]
+            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha='right', va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104,
+                    arrowprops=dict(arrowstyle='-'))
+        else:
+            plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
+        """
         if d['name'] == 'ESO294-010':
             xytext = [17, -15]
             plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va='top', fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104,
                     arrowprops=dict(arrowstyle='-'))
-        elif d['name'] == 'ESO410-005':
+        elif d['name'] == 'ESO410-005G':
             xytext = [30, 12]
             plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104,
                     arrowprops=dict(arrowstyle='-'))
 
         else: 
             plt.annotate(d['name'], xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
-
+        """
 
 
     # Place known LG dwarfs on plot (from McConnachie2015):
     plt.sca(ax)
-    #TODO: _physical vs a_physical: a_physical seems to be more commonly used, and make the figure look better imo
+    #TODO: r_physical vs a_physical: a_physical seems to be more commonly used, and make the figure look better imo
     translation = {'distance':'distance', 'abs_mag':'m_v', 'r_physical':'a_physical'}
     dwarfs = load_data.McConnachie15().data
     cut = xmin < dwarfs[translation[x]]
@@ -272,18 +348,29 @@ def plot_sigma_matrix(fname, distance):
     #cut &= np.array(['des' in survey for survey in dwarfs['survey']])
     dwarfs = dwarfs[cut]
 
-    non_sats = ['ESO 294 -G 010', 'Cetus', 'KKR 25', 'DDO 113', 'Aquarius', 'Antlia', 'KKH 86', 'LGS 3', 'Phoenix', 'Antlia B', 'Tucana', 'KKR 3', 'Leo T']
-
-    non_sats = ['LGS 3','Phoenix','Cetus','Pegasus dIrr','Leo T','Leo A','Aquarius','Tucana','Sagittarius dIrr','UGC 4879','Antlia B','Antlia','KKR 25','KKH 98','UKS 2323-326','KKR 3','KKs3','GR 8','UGC 9128','UGC 8508','IC 3104','UGCA 86','DDO 99','KKH 86','DDO 113']
+    non_sats = ['LGS 3','Phoenix','Cetus','Pegasus dIrr','Leo T','Leo A','Aquarius','Tucana','Sagittarius dIrr','UGC 4879','Antlia B','Antlia','KKR 25','KKH 98','KKR 3','KKs3','GR 8','UGC 9128','UGC 8508','IC 3104','UGCA 86','DDO 99','KKH 86','DDO 113'] # UKS 2323-326 is another name for UGCA438
 
     non_sat_cut = np.array([d['name'] in non_sats for d in dwarfs])
     #and_cut = np.array(['And' in d['name'] for d in dwarfs])
     and_cut = np.array([('And' in d['name']) for d in dwarfs])
+    ands = dwarfs[and_cut]
 
     sat_xs = transform(dwarfs[translation[x]], x_vals, dic[x]['scale']=='log')
     sat_ys = transform(dwarfs[translation[y]], y_vals, dic[y]['scale']=='log')
     plt.scatter(sat_xs[non_sat_cut], sat_ys[non_sat_cut], color='k', marker='x', zorder=101)
     plt.scatter(sat_xs[and_cut], sat_ys[and_cut], color='k', marker='s', zorder=102)
+
+    # Add Tucana B
+    tucB_r = 80 # pc
+    tucB_mv = -6.9
+    tucB_x = transform(tucB_r, x_vals, dic[x]['scale']=='log')
+    tucB_y = transform(tucB_mv, y_vals, dic[y]['scale']=='log')
+    plt.scatter(tucB_x, tucB_y, color='k', marker='x', zorder=101)
+    xy = tucB_x, tucB_y
+    xytext=[-3,3]
+    ha, va = 'right', 'bottom'
+    annote = 'Tuc B'
+    plt.annotate(annote, xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
 
     """
     for i, d in enumerate(dwarfs):
@@ -327,19 +414,39 @@ def plot_sigma_matrix(fname, distance):
    
     # Add approximate candidate location
     #cand_x, cand_y = 3300, -10
-    cand_x, cand_y = 2185, -7.9 # Based on values from mcmc_tight_qual
+    cand_x, cand_y = 3264, -7.9 # Based on values from mcmc_tight_qual
     cand_x = transform(cand_x, x_vals, dic[x]['scale']=='log')
     cand_y = transform(cand_y, y_vals, dic[y]['scale']=='log')
-    plt.scatter(cand_x, cand_y, marker='*', color='yellow', edgecolor='k', s=700, zorder=101)
-    #plt.annotate('Approximate candidate location', (cand_x, cand_y), textcoords='offset points', xytext=[-9,4], ha='right', va='bottom', fontsize=14, zorder=100, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'))
+    plt.scatter(cand_x, cand_y, marker='*', color='k', edgecolor='k', s=300, zorder=101)
+    plt.annotate('DES J0015-3825', (cand_x, cand_y), textcoords='offset points', xytext=[-9,-12], ha='right', va='top', fontsize=10, zorder=100, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'), arrowprops=dict(arrowstyle='-'))
     
+    if write:
+        outname = '{}_vs_{}__'.format(x, y) + '{}={}'.format('distance', int(distance))
+        #plt.savefig('{}.eps'.format(outname), bbox_inches='tight')
+        plt.savefig('{}_test.png'.format(outname), bbox_inches='tight')
+        plt.close()
 
-    outname = '{}_vs_{}__'.format(x, y) + '{}={}'.format('distance', int(distance))
-    #plt.savefig('{}.eps'.format(outname), bbox_inches='tight')
-    plt.savefig('{}.png'.format(outname), bbox_inches='tight')
+def multipanel(fnames, distances, nrows, ncols):
+    if len(fnames) != len(distances):
+        raise Exception
+    if nrows*ncols != len(fnames):
+        raise Exception
+
+    fig, axs = plt.subplots(nrows, ncols, sharex='col', sharey='row')
+    axes = axs.flatten()
+    for i in range(len(fnames)):
+        plt.sca(axes[i])
+        plot_sigma_matrix(fnames[i], distances[i], write=False)
+    plt.savefig('multipanel_test.png', bbox_inches='tight')
     plt.close()
 
+def fourpanel():
+    distances = [500, 1000, 1500, 2000]
+    fnames = ['sigma_table_10trials__{}kpc.fits'.format(d) for d in distances]
+    multipanel(fnames, distances, 2, 2)
+    
 
+    
 
 if __name__ == "__main__":
 
@@ -365,7 +472,6 @@ if __name__ == "__main__":
     inputs = load_data.Inputs(cfg)
     region = simple.survey.Region(survey, args['ra'], args['dec'])
 
-
     abs_mags = np.arange(-2.5, -14.5, -0.5)
     log_r_physical_pcs = np.arange(1.4, 3.8, 0.2)
     r_physicals = 10**log_r_physical_pcs
@@ -373,6 +479,6 @@ if __name__ == "__main__":
     outname = 'sigma_table_{}trials__{}kpc'.format(args['n_trials'], int(args['distance']))
     create_sigma_matrix(args, inputs, region, abs_mags, r_physicals, args['distance'], outname=outname, n_trials=args['n_trials'])
 
-    plot_sigma_matrix(outname, args['distance'])
+    #plot_sigma_matrix(outname, args['distance'])
 
 

@@ -14,7 +14,7 @@ import simple.survey
 import utils
 
 class SimSatellite:
-    def __init__(self, inputs, lon_centroid, lat_centroid, distance, abs_mag, r_physical, ellipticity=0., use_completeness=True):
+    def __init__(self, inputs, lon_centroid, lat_centroid, distance, abs_mag, r_physical, ellipticity=0., use_completeness=True, use_efficiency=False):
         # Stolen from ugali/scratch/simulation/simulate_population.py. Look there for a more general function,
         # which uses maglims, extinction, stuff like that
         """
@@ -86,8 +86,10 @@ class SimSatellite:
         # Use r band:
         # 24.42 is the median magnitude limit from Y6 according to Keith's slack message
         median_maglim = np.median(inputs.m_maglim_r[ugali.utils.healpix.angToDisc(4096, lon_centroid, lat_centroid, 0.75)])
-        if use_completeness:
+        if use_completeness: # Detection and classification
             cut_detect = (np.random.uniform(size=len(mag_r)) < inputs.completeness(mag_r + mag_extinction_r + (median_maglim - np.clip(maglim_r, 20., 26.))))
+        elif use_efficiency: # Detection only
+            cut_detect = (np.random.uniform(size=len(mag_r)) < inputs.efficiency(mag_r + mag_extinction_r + (median_maglim - np.clip(maglim_r, 20., 26.))))
         else:
             cut_detect = np.tile(True, len(mag_r))
 
