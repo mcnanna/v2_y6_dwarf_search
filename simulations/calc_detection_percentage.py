@@ -106,7 +106,6 @@ if __name__ == "__main__":
     parser.add_argument('--ra', type=float)#, default=2.87)
     parser.add_argument('--dec', type=float)#, default=-38.44)
     args = vars(parser.parse_args())
-    print args
 
     with open(args['config'], 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
