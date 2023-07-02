@@ -107,7 +107,7 @@ class Inputs:
 
 class Satellites:
     def __init__(self):
-        self.master = np.recfromcsv('/Users/mcnanna/Research/y3-mw-sats/data/mw_sats_master_2023_extra.csv')
+        self.master = np.recfromcsv('/Users/mcnanna/Research/y3-mw-sats/data/mw_sats_master_2023.csv')
         #self.master = np.recfromcsv('/Users/mcnanna/Research/y3-mw-sats/data/mw_sats_master_extra.csv')
         self.all = self.master[np.where(self.master['type2'] >= 0)[0]]
         self.dwarfs = self.master[np.where(self.master['type2'] >= 3)[0]]
