@@ -38,7 +38,13 @@ def get_random_loc(survey):
     return ra, dec
 
 
-def calc_detection_prob(inputs, region, abs_mag, a_physical, distance, max_trials=100):
+def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=None, max_trials=100):
+    if radec is not None:
+        ra, dec = radec
+    else:
+        ra, dec = get_random_loc(survey)
+    region = simple.survey.Region(survey, ra, dec)
+
     counter = 0
     prob = 0
     delta = 1
@@ -106,23 +112,13 @@ if __name__ == "__main__":
     parser.add_argument('--ra', type=float)#, default=2.87)
     parser.add_argument('--dec', type=float)#, default=-38.44)
     args = vars(parser.parse_args())
+    if (args['ra'] is None) ^ (args['dec'] is None):
+        raise ValueError("Either both or neither of --ra and --dec must be specified")
 
     with open(args['config'], 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
         survey = simple.survey.Survey(cfg)
-
-    if (args['ra'] is None) ^ (args['dec'] is None):
-        raise ValueError("Either both or neither of --ra and --dec must be specified")
-    elif (args['ra'] is None) and (args['dec'] is None):
-        ra, dec = get_random_loc(survey)
-    else:
-        ra, dec = args['ra'], args['dec']
-
     inputs = load_data.Inputs(cfg)
-    region = simple.survey.Region(survey, ra, dec)
-
-    abs_mags = np.arange(-2.5, -14.5, -0.5)
-    log_r_physical_pcs = np.arange(1.4, 3.8, 0.2)
 
     a_physical = 10**args['log_a_half']
 

@@ -55,7 +55,11 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
             for j, y_val in enumerate(y_vals):
                 line = table[is_near(table[x], x_val) & is_near(table[y], y_val)]
                 if typ == 'sigma':
-                    mat_result[i,j] = line['sigma']
+                    try:
+                        mat_result[i,j] = line['sigma']
+                    except ValueError:
+                        print(distance, y_val, x_val)
+                        mat_result[i, j] = 0
                 elif typ == 'prob':
                     mat_result[i,j] = line['prob']
         # Convert from log10(a_physical), which is what's store in the table, to just a_physical
@@ -298,7 +302,12 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
 
     fig.colorbar(im, ax=axs.ravel().tolist(), label=cbar_label, pad=0.08, shrink=0.65) # Move colorbar right to make room for axis labels
 
-    plt.savefig('sensitivity_multipanel.png', bbox_inches='tight', dpi=200)
+    if typ == 'sigma':
+        title = 'sigma_multipanel'
+    elif typ == 'prob':
+        title = 'prob_multipanel'
+    #title += '_fixedloc'
+    plt.savefig(title, bbox_inches='tight', dpi=200)
     plt.close()
 
 def fourpanel(typ='prob'):
