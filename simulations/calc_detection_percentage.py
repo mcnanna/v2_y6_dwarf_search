@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     a_physical = 10**args['log_a_half']
 
-    prob, sigmas = calc_detection_prob(inputs, region, args['abs_mag'], a_physical, args['distance'], max_trials=args['max_trials'])
+    prob, sigmas = calc_detection_prob(inputs, survey, args['abs_mag'], a_physical, args['distance'], max_trials=args['max_trials'])
     np.save('detection_percentages/{d}/sigs_{m:.1f}_{a:.1f}_{d}kpc'.format(m=args['abs_mag'], a=args['log_a_half'], d=int(args['distance'])), sigmas)
 
 
