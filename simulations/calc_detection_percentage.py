@@ -1,7 +1,9 @@
 import argparse
 import sys
+import os
 import glob
 import numpy as np
+import healpy as hp
 import yaml
 import astropy.io.fits as fits
 
@@ -12,6 +14,28 @@ import ugali.utils.projector
 import load_data
 import simSatellite
 import utils
+
+
+def get_random_loc(survey):
+    flist = os.listdir(survey.catalog['dirname'])
+    pixels = [int(fname.split('.')[0][-5:]) for fname in flist]
+    while True:
+        center = np.random.choice(pixels)
+        neighbors = hp.get_all_neighbours(survey.catalog['nside'], center, nest=False)
+        if all(pixel in pixels for pixel in neighbors):
+            break
+    
+    #corner_vecs = hp.boundaries(survey.catalog['nside'], center, step=1, nest=False)
+    #corner_ras, corner_decs = hp.vec2ang(corner_vecs.T, lonlat=True)
+    center_ra, center_dec = ugali.utils.healpix.pixToAng(survey.catalog['nside'], center)
+    resol = hp.nside2resol(survey.catalog['nside'], arcmin=True)/60.
+    while True:
+        ra = center_ra + np.random.uniform(-resol/np.sqrt(2.), resol/np.sqrt(2.))
+        dec = center_dec + np.random.uniform(-resol/np.sqrt(2.), resol/np.sqrt(2.))
+        if ugali.utils.healpix.angToPix(survey.catalog['nside'], ra, dec) == center:
+            break
+
+    return ra, dec
 
 
 def calc_detection_prob(inputs, region, abs_mag, a_physical, distance, max_trials=100):
@@ -79,16 +103,24 @@ if __name__ == "__main__":
     parser.add_argument('--abs_mag', required=True, type=float, help="m_v")
     parser.add_argument('--log_a_half', required=True, type=float, help="log(a_physical), in pc")
     parser.add_argument('--max_trials', type=int, default=100)
-    parser.add_argument('--ra', type=float, default=2.87)
-    parser.add_argument('--dec', type=float, default=-38.44)
+    parser.add_argument('--ra', type=float)#, default=2.87)
+    parser.add_argument('--dec', type=float)#, default=-38.44)
     args = vars(parser.parse_args())
+    print args
 
     with open(args['config'], 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
         survey = simple.survey.Survey(cfg)
 
+    if (args['ra'] is None) ^ (args['dec'] is None):
+        raise ValueError("Either both or neither of --ra and --dec must be specified")
+    elif (args['ra'] is None) and (args['dec'] is None):
+        ra, dec = get_random_loc(survey)
+    else:
+        ra, dec = args['ra'], args['dec']
+
     inputs = load_data.Inputs(cfg)
-    region = simple.survey.Region(survey, args['ra'], args['dec'])
+    region = simple.survey.Region(survey, ra, dec)
 
     abs_mags = np.arange(-2.5, -14.5, -0.5)
     log_r_physical_pcs = np.arange(1.4, 3.8, 0.2)
