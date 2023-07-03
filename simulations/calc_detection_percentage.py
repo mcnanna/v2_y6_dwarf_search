@@ -31,6 +31,8 @@ def get_random_loc(survey):
     resol = hp.nside2resol(survey.catalog['nside'], arcmin=True)/60.
     while True:
         ra = center_ra + np.random.uniform(-resol/np.sqrt(2.), resol/np.sqrt(2.))
+        if ra < 0:
+            ra += 360
         dec = center_dec + np.random.uniform(-resol/np.sqrt(2.), resol/np.sqrt(2.))
         if ugali.utils.healpix.angToPix(survey.catalog['nside'], ra, dec) == center:
             break
@@ -39,12 +41,6 @@ def get_random_loc(survey):
 
 
 def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=None, max_trials=100):
-    if radec is not None:
-        ra, dec = radec
-    else:
-        ra, dec = get_random_loc(survey)
-    region = simple.survey.Region(survey, ra, dec)
-
     counter = 0
     prob = 0
     delta = 1
@@ -54,11 +50,18 @@ def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=Non
     if abs_mag < -11.99:
         return 1., np.tile(37.5, 10)
 
+    print("{:<3} {:>6},{:<6} {:>5} {:>5}".format('n', 'ra', 'dec', 'sigma', 'prob'))
     while (counter < max_trials):
         if (delta < 0.01) and counter >= 20: # Percent has stabilized
             if (np.max(sigmas) < 4.5) or (np.min(sigmas) > 10.0): # Prob is sitting at 0 or 100 and it'll never change
                 break
-            # If neither above condition is met, then prob is sitting at prob has stabilized but it still may change
+            # If neither above condition is met, then prob has stabilized but it still may change
+
+        if radec is not None:
+            ra, dec = radec
+        else:
+            ra, dec = get_random_loc(survey)
+        region = simple.survey.Region(survey, ra, dec)
 
         sim = simSatellite.SimSatellite(inputs, region.ra, region.dec, distance, abs_mag, a_physical)
         data, n_stars = simSatellite.inject(region, sim)
@@ -68,7 +71,7 @@ def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=Non
 
         old_prob = prob
         prob = np.count_nonzero(np.array(sigmas) > 6)*1./len(sigmas)
-        print(counter, round(prob,2), round(sig,2))
+        print("{:<3} {:>6.2f},{:<6.2f} {:>5.2f} {:>5.2f}".format(counter, ra, dec, sig, prob))
         delta = np.abs(prob - old_prob)
 
         counter += 1
