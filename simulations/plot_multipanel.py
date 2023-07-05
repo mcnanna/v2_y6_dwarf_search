@@ -265,11 +265,15 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
             plt.annotate(annote, xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=9, bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
 
         # Add approximate candidate location
-        cand_x, cand_y = 3306, -8.0 # Based on values from mcmc_tight_qual_50k
-        cand_x = transform(cand_x, x_vals, dic[x]['scale']=='log')
-        cand_y = transform(cand_y, y_vals, dic[y]['scale']=='log')
-        plt.scatter(cand_x, cand_y, marker='*', color='k', edgecolor='k', s=200, zorder=101)
-        #plt.annotate('DES J0015-3825', (cand_x, cand_y), textcoords='offset points', xytext=[-9,-12], ha='right', va='top', fontsize=10, zorder=100, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'), arrowprops=dict(arrowstyle='-'))
+        if distance == 2000:
+            cand_x, cand_y = 3306, -8.0 # Based on values from mcmc_tight_qual_50k
+            cand_x = transform(cand_x, x_vals, dic[x]['scale']=='log')
+            cand_y = transform(cand_y, y_vals, dic[y]['scale']=='log')
+            plt.scatter(cand_x, cand_y, marker='*', color='k', edgecolor='k', s=200, zorder=101)
+            xy = cand_x, cand_y
+            xytext=[-6, -4]
+            ha, va = 'right', 'top'
+            plt.annotate('DES J0015-3825', xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, zorder=104, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'))
         
         # X ticks if in the last row
         if True: #ncols*nrows - idx <= ncols:

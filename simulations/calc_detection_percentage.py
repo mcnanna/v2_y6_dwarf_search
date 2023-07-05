@@ -101,6 +101,28 @@ def collect_results(outname='detection_table'):
     return fits_out
 
 
+def analyze_characteristic_densities(ymlfile, n=1000):
+    with open(ymlfile) as f:
+        cfg = yaml.safe_load(f)
+        survey = simple.survey.Survey(cfg)
+    
+    cds = []
+    for _ in range(n):
+        ra, dec = get_random_loc(survey)
+        region = simple.survey.Region(survey, ra, dec)
+        cd = region.characteristic_density_local(region.data, 0., 0., None)
+        cds.append(cd)
+    np.save('local_characteristic_densities.npy', cds)
+
+    ra, dec = 3.874, -38.419
+    region = simple.survey.Region(survey, ra, dec)
+    cd = region.characteristic_density_local(region.data, 0., 0., None)
+    print("{} is cdl near \\name".format(cd))
+
+    return np.array(cds)
+
+
+
 if __name__ == "__main__":
     if '--collect' in sys.argv:
         collect_results()
