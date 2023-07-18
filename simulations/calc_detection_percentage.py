@@ -81,6 +81,9 @@ def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=Non
     print("Average sigma = {}".format(np.mean(sigmas)))
     return prob, sigmas
 
+def calc_density(inputs, survey, abs_mag, a_physical, distance, radec=None, max_trials=100):
+    
+
 
 def collect_results(outname='detection_table'):
     result_files = glob.glob('detection_percentages/*/*.npy')
@@ -101,22 +104,28 @@ def collect_results(outname='detection_table'):
     return fits_out
 
 
-def analyze_characteristic_densities(ymlfile, n=1000):
+def analyze_characteristic_densities(ymlfile, n=100, outlabel=None):
     with open(ymlfile) as f:
         cfg = yaml.safe_load(f)
         survey = simple.survey.Survey(cfg)
-    
+    """ 
     cds = []
-    for _ in range(n):
+    for j in range(n):
         ra, dec = get_random_loc(survey)
         region = simple.survey.Region(survey, ra, dec)
-        cd = region.characteristic_density_local(region.data, 0., 0., None)
-        cds.append(cd)
-    np.save('local_characteristic_densities.npy', cds)
+        data = region.get_data(type='stars', use_other=True) # type='stars', use_other=True is default
+        cd = region.characteristic_density_local(data, 0., 0., None)
+        cds.append((ra, dec, cd))
+    outname = 'cdls/cdl'
+    if outlabel is not None:
+        outname += '_' + str(outlabel)
+    np.save(outname, cds)
+    """
 
     ra, dec = 3.874, -38.419
     region = simple.survey.Region(survey, ra, dec)
-    cd = region.characteristic_density_local(region.data, 0., 0., None)
+    data = region.get_data(type='stars', use_other=True) # type='stars', use_other=True is default
+    cd = region.characteristic_density_local(data, 0., 0., None)
     print("{} is cdl near \\name".format(cd))
 
     return np.array(cds)
@@ -126,6 +135,9 @@ def analyze_characteristic_densities(ymlfile, n=1000):
 if __name__ == "__main__":
     if '--collect' in sys.argv:
         collect_results()
+        sys.exit(0)
+    if '--cdl' in sys.argv:
+        analyze_characteristic_densities('../des.yaml', n=100, outlabel=sys.argv[-1])
         sys.exit(0)
 
     parser = argparse.ArgumentParser()
