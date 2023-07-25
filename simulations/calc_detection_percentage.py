@@ -41,18 +41,17 @@ def get_random_loc(survey):
 
 
 def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=None, max_trials=100):
-    counter = 0
     prob = 0
     delta = 1
 
     sigmas = []
 
     if abs_mag < -11.99:
-        return 1., np.tile(37.5, 10)
+        return 1., np.tile(37.5, 20)
 
     print("{:<3} {:>6},{:<6} {:>5} {:>5}".format('n', 'ra', 'dec', 'sigma', 'prob'))
-    while (counter < max_trials):
-        if (delta < 0.01) and counter >= 20: # Percent has stabilized
+    while (len(sigmas) < max_trials):
+        if (delta < 0.01) and len(sigmas) >= 20: # Percent has stabilized
             if (np.max(sigmas) < 4.5) or (np.min(sigmas) > 10.0): # Prob is sitting at 0 or 100 and it'll never change
                 break
             # If neither above condition is met, then prob has stabilized but it still may change
@@ -71,20 +70,46 @@ def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=Non
 
         old_prob = prob
         prob = np.count_nonzero(np.array(sigmas) > 6)*1./len(sigmas)
-        print("{:<3} {:>6.2f},{:<6.2f} {:>5.2f} {:>5.2f}".format(counter, ra, dec, sig, prob))
+        print("{:<3} {:>6.2f},{:<6.2f} {:>5.2f} {:>5.2f}".format(len(sigmas), ra, dec, sig, prob))
         delta = np.abs(prob - old_prob)
 
-        counter += 1
     print()
-    print("{} total satellites simulated".format(counter))
+    print("{} total satellites simulated".format(len(sigmas)))
     print("Prob = {}".format(prob))
     print("Average sigma = {}".format(np.mean(sigmas)))
     return prob, sigmas
 
-def calc_density(inputs, survey, abs_mag, a_physical, distance, radec=None, max_trials=100):
+def calc_density(inputs, abs_mag, a_physical, distance, max_trials=20):
+    densities = []
+
+    if abs_mag < -11.99:
+       return 99.9, np.tile(99.9, 20)
+
+    while (len(densities) < max_trials):
+        ra, dec = 2.87, -38.44 # Shouldn't matter 
+        sim = simSatellite.SimSatellite(inputs, ra, dec, distance, abs_mag, a_physical, use_completeness=False, use_efficiency=False)
+        stars = sim.stars 
+        cut = stars['PSF_MAG_I_CORRECTED'] < 27.0 # Same cutoff Jonah used. Dimmer stars were modeled by a Sersic profile
+        stars = stars[cut]
+        print(len(stars))
+
+        angseps = ugali.utils.projector.angsep(ra, dec, stars['RA'], stars['DEC'])
     
+        radius = sim.a_h
+        n = np.count_nonzero(angseps < radius)
+        print(sim.a_h*3600, n)
+        area = np.pi * (radius*3600.)**2 
+        density = n/area
+        print("{:<3} {:>5.2}".format(len(densities), density))
+        densities.append(density)
+
+    print()
+    print("{} total satellites simulated".format(len(densities)))
+    print("Mean Density = {}".format(np.mean(densities)))
+    return densities
 
 
+    
 def collect_results(outname='detection_table'):
     result_files = glob.glob('detection_percentages/*/*.npy')
 
@@ -142,6 +167,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
+    parser.add_argument('--density', action='store_true')
     parser.add_argument('--distance', required=True, type=float, help="kpc")
     parser.add_argument('--abs_mag', required=True, type=float, help="m_v")
     parser.add_argument('--log_a_half', required=True, type=float, help="log(a_physical), in pc")
@@ -159,7 +185,16 @@ if __name__ == "__main__":
 
     a_physical = 10**args['log_a_half']
 
-    prob, sigmas = calc_detection_prob(inputs, survey, args['abs_mag'], a_physical, args['distance'], max_trials=args['max_trials'])
-    np.save('detection_percentages/{d}/sigs_{m:.1f}_{a:.1f}_{d}kpc'.format(m=args['abs_mag'], a=args['log_a_half'], d=int(args['distance'])), sigmas)
+    if args['density']: # Only calculate stellar density
+        densities = calc_density(inputs, args['abs_mag'], a_physical, args['distance'], max_trials=args['max_trials'])
+        np.save('stellar_densities/density_{m:.1f}_{a:.1f}'.format(m=args['abs_mag'], a=args['log_a_half']), densities)
+    
+    else: # This is the main use of this script 
+        if args['--ra'] or args['--dec']:
+            radec = ra, dec
+        else:
+            radec = None
+        prob, sigmas = calc_detection_prob(inputs, survey, args['abs_mag'], a_physical, args['distance'], radec=radec, max_trials=args['max_trials'])
+        np.save('detection_percentages/{d}/sigs_{m:.1f}_{a:.1f}_{d}kpc'.format(m=args['abs_mag'], a=args['log_a_half'], d=int(args['distance'])), sigmas)
 
 
