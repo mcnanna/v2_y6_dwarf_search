@@ -110,16 +110,14 @@ def calc_density(inputs, abs_mag, a_physical, distance, max_trials=20):
         stars = sim.stars 
         cut = stars['PSF_MAG_I_CORRECTED'] < 27.0 # Same cutoff Jonah used. Dimmer stars were modeled by a Sersic profile
         stars = stars[cut]
-        print(len(stars))
 
         angseps = ugali.utils.projector.angsep(ra, dec, stars['RA'], stars['DEC'])
     
         radius = sim.a_h
         n = np.count_nonzero(angseps < radius)
-        print(sim.a_h*3600, n)
         area = np.pi * (radius*3600.)**2 
         density = n/area
-        print("{:<3} {:>5.2}".format(len(densities), density))
+        print("{:<3} {:>5.4}".format(len(densities), density))
         densities.append(density)
 
     print()
@@ -205,7 +203,7 @@ if __name__ == "__main__":
 
     if args['density']: # Only calculate stellar density
         densities = calc_density(inputs, args['abs_mag'], a_physical, args['distance'], max_trials=args['max_trials'])
-        np.save('stellar_densities/density_{m:.1f}_{a:.1f}'.format(m=args['abs_mag'], a=args['log_a_half']), densities)
+        np.save('stellar_densities/density_{m:.1f}_{a:.1f}_{d}kpc'.format(m=args['abs_mag'], a=args['log_a_half'], d=args['distance']), densities)
     
     else: # This is the main use of this script 
         if args['--ra'] or args['--dec']:
