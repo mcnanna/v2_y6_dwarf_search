@@ -102,7 +102,7 @@ def calc_density(inputs, abs_mag, a_physical, distance, max_trials=20):
     densities = []
 
     if abs_mag < -11.99:
-       return 99.9, np.tile(99.9, 20)
+       return np.tile(99.9, max_trials)
 
     while (len(densities) < max_trials):
         ra, dec = 2.87, -38.44 # Shouldn't matter 
@@ -129,9 +129,13 @@ def collect_densities(outname='density_table'):
     density_files = glob.glob('stellar_densities/*.npy')
 
     out_array = []
-    for fname in result_files:
+    for fname in density_files:
         m, a, d = list(map(float, fname[:-7].split('_')[-3:]))
-        densities = np.load(fname)
+        try:
+            densities = np.load(fname)
+        except:
+            print(fname)
+            raise Exception
         mean = np.mean(densities)
         std = np.std(densities)
         out_array.append((d, m, a, mean, std))
@@ -174,8 +178,14 @@ def analyze_characteristic_densities(ymlfile, n=100, outlabel=None):
 
 if __name__ == "__main__":
     if '--collect' in sys.argv:
-        collect_detection_probs()
-        collect_densities()
+        try:
+            collect_detection_probs()
+        except OSError:
+            print("Detection probability file already exists")
+        try:
+            collect_densities()
+        except OSError:
+            print("Stellar density file already exists")
         sys.exit(0)
     if '--cdl' in sys.argv:
         analyze_characteristic_densities('../des.yaml', n=100, outlabel=sys.argv[-1])
