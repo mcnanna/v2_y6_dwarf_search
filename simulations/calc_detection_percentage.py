@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     if args['density']: # Only calculate stellar density
         densities = calc_density(inputs, args['abs_mag'], a_physical, args['distance'], max_trials=args['max_trials'])
-        np.save('stellar_densities/density_{m:.1f}_{a:.1f}_{d}kpc'.format(m=args['abs_mag'], a=args['log_a_half'], d=args['distance']), densities)
+        np.save('stellar_densities/density_{m:.1f}_{a:.1f}_{d}kpc'.format(m=args['abs_mag'], a=args['log_a_half'], d=int(args['distance'])), densities)
     
     else: # This is the main use of this script 
         if args['--ra'] or args['--dec']:
