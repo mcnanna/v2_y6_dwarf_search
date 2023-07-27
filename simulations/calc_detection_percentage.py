@@ -102,7 +102,8 @@ def calc_density(inputs, abs_mag, a_physical, distance, max_trials=20):
     densities = []
 
     if abs_mag < -11.99:
-       return np.tile(99.9, max_trials)
+        max_trials = int(abs_mag*4 + 58) # -12.0 -> 10, -14.0 -> 2
+        print("Too bright (M_v = {}), overriding maximum trials to {}".format(abs_mag, max_trials))
 
     while (len(densities) < max_trials):
         ra, dec = 2.87, -38.44 # Shouldn't matter 
