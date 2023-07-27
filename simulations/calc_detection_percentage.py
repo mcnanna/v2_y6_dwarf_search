@@ -78,6 +78,25 @@ def calc_detection_prob(inputs, survey, abs_mag, a_physical, distance, radec=Non
     print("Prob = {}".format(prob))
     print("Average sigma = {}".format(np.mean(sigmas)))
     return prob, sigmas
+    
+def collect_detection_probs(outname='detection_table'):
+    result_files = glob.glob('detection_percentages/*/*.npy')
+
+    out_array = []
+    for fname in result_files:
+        m, a, d = list(map(float, fname[:-7].split('_')[-3:]))
+        sigmas = np.load(fname)
+        avg = np.mean(sigmas)
+        std = np.std(sigmas)
+        prob = np.count_nonzero(sigmas > 6)*1./len(sigmas)
+        out_array.append((d, m, a, avg, std, prob))
+
+    dtype = [('distance',float), ('abs_mag',float), ('a_physical',float), ('sigma',float), ('std',float), ('prob',float)]
+    fits_out = np.array(out_array, dtype=dtype)
+    fits.writeto('detection_percentages/' + outname + '.fits', fits_out)
+    
+    return fits_out
+
 
 def calc_density(inputs, abs_mag, a_physical, distance, max_trials=20):
     densities = []
@@ -108,25 +127,23 @@ def calc_density(inputs, abs_mag, a_physical, distance, max_trials=20):
     print("Mean Density = {}".format(np.mean(densities)))
     return densities
 
-
-    
-def collect_results(outname='detection_table'):
-    result_files = glob.glob('detection_percentages/*/*.npy')
+def collect_densities(outname='density_table'):
+    density_files = glob.glob('stellar_densities/*.npy')
 
     out_array = []
     for fname in result_files:
         m, a, d = list(map(float, fname[:-7].split('_')[-3:]))
-        sigmas = np.load(fname)
-        avg = np.mean(sigmas)
-        std = np.std(sigmas)
-        prob = np.count_nonzero(sigmas > 6)*1./len(sigmas)
-        out_array.append((d, m, a, avg, std, prob))
+        densities = np.load(fname)
+        mean = np.mean(densities)
+        std = np.std(densities)
+        out_array.append((d, m, a, mean, std))
 
-    dtype = [('distance',float), ('abs_mag',float), ('a_physical',float), ('sigma',float), ('std',float), ('prob',float)]
+    dtype = [('distance',float), ('abs_mag',float), ('a_physical',float), ('density',float), ('std',float)]
     fits_out = np.array(out_array, dtype=dtype)
-    fits.writeto('detection_percentages/' + outname + '.fits', fits_out)
-    
+    fits.writeto('stellar_densities/' + outname + '.fits', fits_out)
+
     return fits_out
+
 
 
 def analyze_characteristic_densities(ymlfile, n=100, outlabel=None):
@@ -159,7 +176,8 @@ def analyze_characteristic_densities(ymlfile, n=100, outlabel=None):
 
 if __name__ == "__main__":
     if '--collect' in sys.argv:
-        collect_results()
+        collect_detection_probs()
+        collect_densities()
         sys.exit(0)
     if '--cdl' in sys.argv:
         analyze_characteristic_densities('../des.yaml', n=100, outlabel=sys.argv[-1])
