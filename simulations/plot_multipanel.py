@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import scipy.interpolate
 import yaml
 import astropy.io.fits as fits
 import matplotlib
@@ -25,7 +26,7 @@ matplotlib.rcParams['font.family'] = 'serif'
 plt.ioff()
 
 
-def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
+def plot_sensitivity(fname, distances, nrows, ncols, typ='prob', density_table=None):
     dic = {'distance': {'label':'$D$', 'conversion': lambda d:int(d), 'unit':'kpc', 'scale':'linear', 'reverse':False}, 
            'abs_mag': {'label':'$M_V$', 'conversion': lambda v:round(v,1), 'unit':'mag', 'scale':'linear', 'reverse':True},
            #'a_physical': {'label':'$a_{1/2}$', 'conversion': lambda r:int(round(r,0)), 'unit':'pc', 'scale':'log', 'reverse':False},
@@ -36,6 +37,8 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
         return np.array([val-e < a < val+e for a in arr])
 
     full_table = fits.open(fname)[1].data
+    if density_table is not None:
+        full_densities = fits.open(density_table)[1].data
 
     fig, axs = plt.subplots(nrows, ncols, figsize=(17, 10)) # Could take figsize formula from plot_sigma_matrix and mutiply by nrows and nccols
     plt.subplots_adjust(wspace=0.38)
@@ -46,23 +49,38 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
 
         distance_cut = is_near(full_table['distance'], distance)
         table = full_table[distance_cut]
+        if density_table is not None:
+            density_distance_cut = is_near(full_densities['distance'], distance)
+            densities = full_densities[density_distance_cut]
 
         x, y = 'a_physical', 'abs_mag'
         x_vals = sorted(set(table[x]), reverse=dic[x]['reverse'])
         y_vals = sorted(set(table[y]), reverse=dic[y]['reverse'])
         mat_result = np.zeros((len(x_vals), len(y_vals)))
         for i, x_val in enumerate(x_vals):
+            #if density_table is not None:
+            #    # Create interpolation function to estimate abs_mags between a_physical values
+            #    a_cut = is_near(table[x], x_val)
+            #    prob_interp = scipy.interpolate.interp1d(table[a_cut][y], table[a_cut][typ])
             for j, y_val in enumerate(y_vals):
                 line = table[is_near(table[x], x_val) & is_near(table[y], y_val)]
-                if typ == 'sigma':
-                    try:
-                        mat_result[i,j] = line['sigma']
-                    except ValueError:
-                        print(distance, y_val, x_val)
-                        mat_result[i, j] = 0
-                elif typ == 'prob':
-                    mat_result[i,j] = line['prob']
-        # Convert from log10(a_physical), which is what's store in the table, to just a_physical
+                try:
+                    mat_result[i, j] = line[typ]
+                except ValueError:
+                    print(distance, y_val, x_val)
+                    mat_result[i, j] = 0
+
+                #if density_table is not None:
+                #    # Override above mat_result insertion by adjusting for blended abs_mag 
+                #    density = densities[is_near(densities[x], x_val) & is_near(densities[y], y_val)]['density'][0]
+                #    mag_reduction = max(0, 0.39*np.log(density) + 2.21) # fit is from blending.ipynb based on Jonah's tests
+                #    try:
+                #        mat_result[i, j] = prob_interp(y_val + mag_reduction)
+                #    except ValueError:
+                #        #print(x_val, y_val, round(y_val + mag_reduction,1))
+                #        mat_result[i, j] = 0
+
+        # Convert from log10(a_physical), which is what's stored in the tables, to just a_physical
         x_vals = 10**np.array(x_vals) 
     
         plt.sca(ax)
@@ -112,12 +130,45 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
                 height = top - bottom
             matplotlib.rcParams["hatch.color"] = 'k'
             rect = Rectangle((0, bottom), width, height, hatch='/', facecolor = 'none', zorder=50)
-            ax.add_patch(rect)
+            #ax.add_patch(rect)
 
         # Add distance label
         ax.text(0.4, 22, "$D = {:>2}$ Mpc".format(distance/1000.), bbox=dict(facecolor='white', boxstyle='round,pad=0.2'), zorder=104)
 
-        #TODO: blending
+        ### Blending, visualization option 2
+        if density_table is not None:
+            full_densities = fits.open(density_table)[1].data
+            density_distance_cut = is_near(full_densities['distance'], distance)
+            densities = full_densities[density_distance_cut]
+
+            blended_x = []
+            blended_y = []
+
+            for x_val in x_vals: # a_physicals
+                xval = dic[x]['conversion'](x_val) # Converts to log(a_physical) which is what's stored in the tables
+                a_cut = is_near(table[x], xval)
+                prob_interp = scipy.interpolate.interp1d(table[a_cut][y], table[a_cut][typ])
+                for y_val in y_vals: # abs_mags
+                    density = densities[is_near(densities[x], xval) & is_near(densities[y], y_val)]['density'][0]
+                    mag_reduction = max(0, 0.39*np.log(density) + 2.21) # fit is from blending.ipynb based on Jonah's tests
+                    try:
+                        recovery_prob = prob_interp(y_val + mag_reduction)
+                    except ValueError:
+                        recovery_prob = 0
+                    noblend_prob = table[is_near(table[x], xval) & is_near(table[y], y_val)][typ]
+
+                    if (noblend_prob > 0.5) and (recovery_prob < 0.5):
+                        blended_x.append(x_val)
+                        blended_y.append(y_val)
+
+            blended_x = transform(blended_x, x_vals, dic[x]['scale'] == 'log')
+            blended_y = transform(blended_y, y_vals, dic[y]['scale'] == 'log')
+            matplotlib.rcParams["hatch.color"] = '0.1'
+            for x_center, y_center in zip(blended_x, blended_y):
+                rect = Rectangle((x_center-0.5, y_center-0.5), 1, 1, facecolor='none', hatch='X', zorder=51)
+                ax.add_patch(rect)
+
+
         #TODO maybe: LSST curve
 
         ### Place known sats on plot (from mw_sats_master.csv):
@@ -129,6 +180,8 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
         cut &= ymin < dwarfs[translation[y]]
         cut &= dwarfs[translation[y]] < ymax
         # Add distance cut
+        #print(max(dwarfs[cut][translation['distance']]))
+        #cut &= (dwarfs[translation['distance']] < distance) & (dwarfs[translation['distance']] > distance-500)
         if distance == 500:
             cut &= dwarfs[translation['distance']] < 750
         elif distance == 2000:
@@ -176,6 +229,8 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
         cut &= dwarfs[translation[y]] < ymax
         #cut &= np.array(['des' in survey for survey in dwarfs['survey']])
         # Add distance cut
+        #print(max(dwarfs[cut][translation['distance']]))
+        #cut &= (dwarfs[translation['distance']] < distance) & (dwarfs[translation['distance']] > distance-500)
         if distance == 500:
             cut &= dwarfs[translation['distance']] < 750
         elif distance == 2000:
@@ -310,14 +365,16 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob'):
         title = 'sigma_multipanel'
     elif typ == 'prob':
         title = 'prob_multipanel'
-    #title += '_fixedloc'
+    if density_table is not None:
+        title += '_blending'
+    title += '_test'
     plt.savefig(title, bbox_inches='tight', dpi=200)
     plt.close()
 
 def fourpanel(typ='prob'):
     distances = [500, 1000, 1500, 2000]
     fname = 'detection_table.fits'
-    plot_sensitivity(fname, distances, 2, 2, typ=typ)
+    plot_sensitivity(fname, distances, 2, 2, typ=typ, density_table='blending/density_table.fits')
 
 
 if __name__ == '__main__':
