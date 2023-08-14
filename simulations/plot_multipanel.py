@@ -234,12 +234,13 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob', density_table=N
         if distance == 500:
             cut &= dwarfs[translation['distance']] < 750
         elif distance == 2000:
-            cut &= dwarfs[translation['distance']] > 1750
+            cut &= (dwarfs[translation['distance']] > 1750) & (dwarfs[translation['distance']] < 2500)
         else:
-            cut &= (dwarfs[translation['distance']] > distance-250)  & (dwarfs[translation['distance']] < distance+250)
+            cut &= (dwarfs[translation['distance']] > distance-250) & (dwarfs[translation['distance']] < distance+250)
         dwarfs = dwarfs[cut]
 
-        non_sats = ['LGS 3','Phoenix','Cetus','Pegasus dIrr','Leo T','Leo A','Aquarius','Tucana','Sagittarius dIrr','UGC 4879','Antlia B','Antlia','KKR 25','KKH 98','KKR 3','KKs3','GR 8','UGC 9128','UGC 8508','IC 3104','UGCA 86','DDO 99','KKH 86','DDO 113', 'ESO 410- G 005', 'ESO 294- G 010', 'UKS 2323-326'] # UKS 2323-326 is another name for UGCA438
+        # This is an explicit whitelist of the galaxies included in the plot (not counting And sats)
+        non_sats = ['LGS 3','Phoenix','Cetus','Pegasus dIrr','Leo T','Leo A','Aquarius','Tucana','Sagittarius dIrr','UGC 4879','Antlia B','Antlia','KKR 25','KKH 98','KKR 3','KKs3','GR 8','UGC 9128','UGC 8508','IC 3104','UGCA 86','DDO 99','KKH 86','DDO 113','ESO 410- G 005','ESO 294- G 010','UKS 2323-326','Pisces VII','Pegasus V','Pegasus W','Leo M','Leo K'] # UKS 2323-326 is another name for UGCA438
 
         non_sat_cut = np.array([d['name'] in non_sats for d in dwarfs])
         and_cut = np.array([('And' in d['name']) for d in dwarfs])
@@ -367,7 +368,7 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob', density_table=N
         title = 'prob_multipanel'
     if density_table is not None:
         title += '_blending'
-    title += '_test'
+    #title += '_test'
     plt.savefig(title, bbox_inches='tight', dpi=200)
     plt.close()
 

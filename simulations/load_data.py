@@ -185,7 +185,7 @@ class McConnachie15(SourceCatalog):
         self.filename = filename
  
         delimiter = [19,3,3,5,3,3,3,6,6,5,5,7,5,5,5,4,4,6,5,5,5,5,5,5,4,4,7,6,6,5,5,5,5,5,5,5,5,5,5,6,5,5,6,5,5,2]
-        raw = np.genfromtxt(filename,delimiter=delimiter,usecols=list(range(7))+[8,14,20,26],dtype=['|S19']+10*[float],skip_header=36)
+        raw = np.genfromtxt(filename,delimiter=delimiter,usecols=list(range(7))+[8,14,20,26],dtype=['|S19']+10*[float],skip_header=38)
 
         raw[['LMC' in name for name in raw['f0']].index(True)]['f10'] = 540.0 # LMC radius = 9 deg
         raw[['SMC' in name for name in raw['f0']].index(True)]['f10'] = 180.0 # LMC radius = 3 deg
