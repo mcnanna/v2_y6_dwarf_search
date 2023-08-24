@@ -56,6 +56,8 @@ class Satellites:
 
         # Calculate distance from MW and (x,y,z) coordinates in kpc
         self.distance, self.position = self.get_halocentric_positions(self.halos, self.subhalos, params)
+        # Calculate distance from M31 in kpc
+        self.M31_distance = self.get_M31centric_positions(self.halos, self.subhalos, params)
 
         # Calculate sizes (in pc) and surface brightness
         self.r_physical = self.get_sizes(self.rvir_acc, self.rs_acc, self.subhalos, params)
@@ -227,6 +229,18 @@ class Satellites:
         radii = np.sqrt(x**2 + y**2 + z**2)#*params.hyper['chi']
         position = np.vstack((x,y,z)).T
         return radii, position
+
+    def get_M31centric_positions(self, halos, subhalos, params, Mpc_to_kpc=1000.):
+        """Get distances of subhalos from M31 in kpc"""
+        x = params.hyper['chi'] * subhalos['x'] * (Mpc_to_kpc/params.cosmo['h'])
+        y = params.hyper['chi'] * subhalos['y'] * (Mpc_to_kpc/params.cosmo['h'])
+        z = params.hyper['chi'] * subhalos['z'] * (Mpc_to_kpc/params.cosmo['h'])
+        x_M31 = params.hyper['chi'] * halos.M31['x'] * (Mpc_to_kpc/params.cosmo['h'])
+        y_M31 = params.hyper['chi'] * halos.M31['y'] * (Mpc_to_kpc/params.cosmo['h'])
+        z_M31 = params.hyper['chi'] * halos.M31['z'] * (Mpc_to_kpc/params.cosmo['h'])
+        M31_distances = np.sqrt((x-x_M31)**2 + (y-y_M31)**2 + (z-z_M31)**2)
+        return M31_distances
+
 
     def get_sizes(self, rvir_acc, rs_acc, subhalos, params, c_normalization=10.0):
         """

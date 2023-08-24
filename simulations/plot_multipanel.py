@@ -329,7 +329,7 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob', density_table=N
             xy = cand_x, cand_y
             xytext=[-6, -4]
             ha, va = 'right', 'top'
-            plt.annotate('DES J0015-3825', xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, zorder=104, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'))
+            plt.annotate('NGC 55-dw1', xy, textcoords='offset points', xytext=xytext, ha=ha, va=va, fontsize=10, zorder=104, bbox = dict(facecolor='white', boxstyle='round,pad=0.2'))
         
         # X ticks if in the last row
         if True: #ncols*nrows - idx <= ncols:

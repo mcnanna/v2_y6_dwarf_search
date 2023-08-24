@@ -34,11 +34,16 @@ for i, pair in enumerate(pairs):
     close_cut = (sats.distance > 300)
     far_cut = (sats.distance < 2000)
     cut = close_cut & far_cut
+    # Calc cut for M31 distance
+    M31_cut = (sats.M31_distance[cut] > 300)
+    #M31_cut = np.tile(True, np.count_nonzero(cut))
 
     sigma_table = fits.open('realizations/{0}/sats_table_{0}_5trials.fits'.format(pair))[1].data
     sat_ras, sat_decs = sats.ra_dec(psi)
-    sat_ras, sat_decs = sat_ras[cut], sat_decs[cut]
-    sigmas = sigma_table['sig']
+    #sat_ras, sat_decs = sat_ras[cut], sat_decs[cut]
+    #sigmas = sigma_table['sig']
+    sat_ras, sat_decs = sat_ras[cut][M31_cut], sat_decs[cut][M31_cut]
+    sigmas = sigma_table['sig'][M31_cut]
 
     # Determine # in foorprint and # detectable
     pix = ugali.utils.healpix.angToPix(4096, sat_ras, sat_decs, nest=True)
@@ -73,14 +78,16 @@ for i, pair in enumerate(pairs):
         #sizes[detectable_cut] = 20.0 # For circles
         sizes[detectable_cut] = 100.0 # For stars
         markers[detectable_cut] = '*'
-        color_by = sats.distance[cut]
-        cmap = 'viridis_r'
+        #color_by = sats.distance[cut]
+        color_by = sats.distance[cut][M31_cut]
+        cmap = 'inferno_r'
         cbar_label = 'Distance (kpc)'
         vmin, vmax = 300, 2000
 
     # Plot v1
     plt.sca(axs1[i])
     smap = skymap.Skymap(projection='mbtfpq', lon_0 = 0)
+    smap.scatter([10.6846], [41.2692], c='k', s=300, marker='$\\bigotimes$', latlon=True, zorder=1)
     custom_scatter(smap, sat_ras, sat_decs, c=color_by, cmap=cmap, vmin=vmin, vmax=vmax, latlon=True, s=sizes, markers=markers, edgecolors='k', linewidths=0.2)
     smap.plot(des_poly['ra'], des_poly['dec'], latlon=True, c='0.25', lw=3, alpha=0.3, zorder=0)
     plt.title(titles[i], family='monospace')
@@ -88,6 +95,7 @@ for i, pair in enumerate(pairs):
     # Plot v2
     plt.sca(axes2[i])
     smap = skymap.Skymap(projection='mbtfpq', lon_0 = 0)
+    smap.scatter([10.6846], [41.2692], c='k', s=300, marker='$\\bigotimes$', latlon=True, zorder=1)
     custom_scatter(smap, sat_ras, sat_decs, c=color_by, cmap=cmap, vmin=vmin, vmax=vmax, latlon=True, s=sizes, markers=markers, edgecolors='k', linewidths=0.2)
     smap.plot(des_poly['ra'], des_poly['dec'], latlon=True, c='0.25', lw=3, alpha=0.3, zorder=0)
     plt.title(titles[i], family='monospace')
