@@ -25,7 +25,7 @@ quants['metallicity'] = ['$Z$', 1, '\ldots', 1e4] # Special case with 10^{-4} af
 #\hline
 quants['Mv'] = ['$M_V$', 1, '\magn', 1., True]
 quants['luminosity'] = ['$L_V$', 1, '10^5 \Lsolar', 1e-5]
-quants['surface_brightness'] = ['$\mu_0$', 1, '\magn arcsec^{-2}', 1., True] # Special case with no errors
+quants['surface_brightness'] = ['$\mu$', 1, '\magn arcsec^{-2}', 1., True] # Special case with no errors
 quants['mass'] = ['$M_*$', 2, '10^5 \Msolar', 1e-5]
 quants['feh'] = ['{[Fe/H]}', 1, 'dex'] # Special case with no errors
 quants['glon'] = ['$l$', 3, 'deg']
