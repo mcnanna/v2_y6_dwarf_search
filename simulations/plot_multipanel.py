@@ -325,7 +325,7 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob', density_table=N
             cand_x, cand_y = 3306, -8.0 # Based on values from mcmc_tight_qual_50k
             cand_x = transform(cand_x, x_vals, dic[x]['scale']=='log')
             cand_y = transform(cand_y, y_vals, dic[y]['scale']=='log')
-            plt.scatter(cand_x, cand_y, marker='*', color='k', edgecolor='k', s=200, zorder=101)
+            plt.scatter(cand_x, cand_y, marker='*', color='yellow', edgecolor='k', s=220, linewidth=0.5, zorder=101)
             xy = cand_x, cand_y
             xytext=[-6, -4]
             ha, va = 'right', 'top'
@@ -369,7 +369,7 @@ def plot_sensitivity(fname, distances, nrows, ncols, typ='prob', density_table=N
     if density_table is not None:
         title += '_blending'
     #title += '_test'
-    plt.savefig(title, bbox_inches='tight', dpi=200)
+    plt.savefig(title, bbox_inches='tight', dpi=300)
     plt.close()
 
 def fourpanel(typ='prob'):

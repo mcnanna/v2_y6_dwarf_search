@@ -63,5 +63,5 @@ ax.set_xlabel('$r$ (mag)')
 ax.set_ylabel('Stellar Completeness')
 #ax.legend()
 
-plt.savefig('figures/completeness.png', dpi=200, bbox_inches='tight')
+plt.savefig('figures/completeness.png', dpi=300, bbox_inches='tight')
 #plt.close()

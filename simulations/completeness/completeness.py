@@ -277,7 +277,7 @@ ax2.tick_params('y', colors='red')
 plt.ylim(0., 1.)
 #plt.plot(mag_centers, contamination_star, c='orange')
 outname = 'completeness_plots/y6_stellar_classification_summary_r_ext{}{}.png'.format(args['ext'], '_merge' if args['merge'] else '')
-plt.savefig(outname, dpi=200)
+plt.savefig(outname, dpi=300)
 
 ##################################################################
 

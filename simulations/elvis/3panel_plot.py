@@ -103,7 +103,7 @@ for i, pair in enumerate(pairs):
 plt.figure(1)
 cb = plt.colorbar(ax = axs1, shrink=0.95, aspect=25)
 cb.set_label(label=cbar_label, size=14)
-plt.savefig('3panel.png', bbox_inches='tight', dpi=200)
+plt.savefig('3panel.png', bbox_inches='tight', dpi=300)
 plt.close()
 
 plt.figure(2)
@@ -112,5 +112,5 @@ axs2[1,1].set_axis_off()
 cax = fig2.add_axes([0.56, 0.3, 0.3, 0.03]) # left, bottom, width, height
 cb = plt.colorbar(cax=cax, orientation='horizontal')
 cb.set_label(label=cbar_label, size=13)
-plt.savefig('3panel_v2.png', bbox_inches='tight', dpi=200)
+plt.savefig('3panel_v2.png', bbox_inches='tight', dpi=300)
 plt.close()
